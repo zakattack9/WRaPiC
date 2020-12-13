@@ -2,28 +2,29 @@
 Wrapic is a wireless Raspberry Pi cluster running various containerized applications on top of full Kubernetes. In my setup, a single 5-port PoE switch provides power to four RPi's all of which are equipped with PoE hats. One Raspberry Pi acts as a jump box connecting to an external network through WiFi and forwarding traffic through its ethernet port; this provides the other 3 RPi's with an internet connection and separates the cluster onto its own private network. The jump box also acts as the Kubernetes master node and all other RPi's are considered worker nodes in the cluster.
 
 ### Contents
-- Parts List
-- Initial Headless RPi Setup
-- Setting up the RPi Jump Box and Cluster Network
-- Installing Docker and Kubernetes w/Flannel CNI
-  - Worker Node Setup
-  - Master Node Setup
-- Configure iTerm2 Window Arrangement and Profile
-- Installing Calico CNI
+- [Parts List](https://github.com/zakattack9/WRaPiC#parts-list)
+- [Initial Headless RPi Setup](https://github.com/zakattack9/WRaPiC#initial-headless-rpi-setup)
+- [Setting up the Jump Box and Cluster Network](https://github.com/zakattack9/WRaPiC#setting-up-the-jump-box-and-cluster-network)
+- [Installing Docker and Kubernetes w/Flannel CNI](https://github.com/zakattack9/WRaPiC#installing-docker-and-kubernetes-wflannel-cni)
+  - [Worker Node Setup](https://github.com/zakattack9/WRaPiC#worker-node-setup)
+  - [Master Node Setup](https://github.com/zakattack9/WRaPiC#master-node-setup)
+- [Extra Configurations]
+  - Configure iTerm2 Window Arrangement and Profile
+  - Installing Calico CNI
 
 ## Parts List
 My cluster only includes 4 RPi 4B's though there is no limit to the amount of RPi's that can be used. If you choose to not go the PoE route, additional micro USB cables and a USB power hub will be needed to power the Pi's.
-- **4x** Raspberry Pi 4B 2GB RAM
+- *4x* Raspberry Pi 4B 2GB RAM
   - the 3B and 3B+ models will also suffice
   - it is recommended to get at least 2GB of RAM if running full K8s
-- **4x** Official Raspberry Pi PoE Hats
+- *4x* Official Raspberry Pi PoE Hats
 - 5 Port PoE Gigabit Ethernet Switch
   - does not need to support PoE if you are not planning to purchase PoE hats
   - does not need to support gigabit ethernet though the Pi 4's do support it
-- **4x** 0.5ft Ethernet Cables
+- *4x* 0.5ft Ethernet Cables
   - I went with 0.5ft cables to keep my setup compact
   - at the very least, a Cat 5e cable is needed to support gigabit ethernet
-- **4x** 32GB MicroSD cards
+- *4x* 32GB MicroSD cards
   - I'd recommend sticking to a reputable brand
 - Raspberry Pi Cluster Case
   - one with good ventilation and heat dissipation is recommended 
@@ -83,7 +84,7 @@ sudo dphys-swapfile swapoff && sudo dphys-swapfile uninstall && sudo update-rc.d
 ```
 - should backup SSH keys
 
-## Setting up the RPi Jump Box and Cluster Network
+## Setting up the Jump Box and Cluster Network
 - [followed this guide to router configuration](https://downey.io/blog/create-raspberry-pi-3-router-dhcp-server/)
 - [referenced this guide for other setup tips](https://medium.com/better-programming/how-to-set-up-a-raspberry-pi-cluster-ff484a1c6be9)
 - set up wrapic0 (router) `/etc/dhcpcd.conf` see [dhcpcd.conf](https://manpages.debian.org/testing/dhcpcd5/dhcpcd.conf.5.en.html)
@@ -251,7 +252,8 @@ strace -eopenat kubectl version
 	- resolved by running `sudo ip link delete flannel.1` on the host whose flannel pod was failing
 	- deleted the flannel pod with `kubectl delete pod -n kube-system kube-flannel-ds-XXXXX`
 
-## Installing Calico CNI
+## Extra Configurations
+### Installing Calico CNI
 - did not work (see side notes)
 - get calico yaml `curl https://docs.projectcalico.org/manifests/calico.yaml -O`
 - open `calico.yaml` in nano and search for `192.168.0.0/16` 
@@ -269,7 +271,7 @@ strace -eopenat kubectl version
 - Calico could be used but it would require installation of an arm64 Raspian image (currently in beta)
 	- Calico only supports amd64 and arm64 (as of 12/10)
 
-## Configure iTerm Window Arrangement and Profiles
+### Configure iTerm Window Arrangement and Profiles
 - `ssh pi@routerPi.local`
 - `ssh -t pi@routerPi.local 'ssh pi@workerNode1.local'`
 - `ssh -t pi@routerPi.local 'ssh pi@workerNode2Pi.local'`
