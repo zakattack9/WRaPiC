@@ -163,7 +163,7 @@ sudo iptables -A FORWARD -i eth0 -o wlan0 -j ACCEPT
 13) `sudo dpkg-reconfigure iptables-persistent` to re-save and persist our `iptables` rules across reboots
 
 #### Side Notes
-- If something goes wrong, I highly recommend checking out [Tim Downey's RPi router guide](https://downey.io/blog/create-raspberry-pi-3-router-dhcp-server/) as additional information is provided
+- If something goes wrong, I highly recommend checking out [Tim Downey's RPi router guide](https://downey.io/blog/create-raspberry-pi-3-router-dhcp-server/) as additional information is provided there
 - `sudo iptables -L -n -v` to check the current `iptables` rules
 - `cat /var/lib/misc/dnsmasq.leases` to check the current leases provided by dnsmasq
 - `sudo service dnsmasq restart` to restart dnsmasq
@@ -185,10 +185,9 @@ curl -sSL get.docker.com | sh && sudo usermod pi -aG docker
 ```bash
 export VERSION=<version> && curl -sSL get.docker.com | sh
 sudo usermod pi -aG docker
-  - Where `<version>` is replaced with a specific Docker Engine version 
 ```
-2) `sudo nano /boot/cmdline.txt` and add `cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory` to end of the line
-  - Do not make a new line and ensure that there's a space in front of `cgroup_enable=cpuset`
+  - Where `<version>` is replaced with a specific Docker Engine version 
+2) `sudo nano /boot/cmdline.txt` and add `cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory` to end of the line—do not make a new line and ensure that there's a space in front of `cgroup_enable=cpuset`
 3) `sudo reboot` to reboot the RPi for boot changes to take effect (do not skip this step)
 4) Install Kubernetes
 ##### Install the latest version of K8s
@@ -209,16 +208,16 @@ curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add
 5) `sudo sysctl net.bridge.bridge-nf-call-iptables=1`
 
 ### Master Node Setup
-These steps should be performed on only one RPi (I used the RPi jump box).
+These steps should be performed only on one RPi (I used the RPi jump box).
 
 1) `sudo kubeadm config images pull -v3`
 2) `sudo nano /etc/resolv.conf` and ensure that it does not have `nameserver 127.0.0.1` 
-  - If `nameserver 127.0.0.1` exists, remove it and replace it with another DNS IP address, then double check that `DNSMASQ_EXCEPT=lo` has been added in `/etc/default/dnsmasq` to prevent dnsmasq from overwriting/adding `nameserver 127.0.0.1` to `/etc/resolv.conf` upon reboot
+  - If `nameserver 127.0.0.1` exists, remove it and replace it with another DNS IP address that isn't the loopback address, then double check that `DNSMASQ_EXCEPT=lo` has been added in `/etc/default/dnsmasq` to prevent dnsmasq from overwriting/adding `nameserver 127.0.0.1` to `/etc/resolv.conf` upon reboot
   - This step is crucial to prevent coredns pods from crashing upon running `kubeadm init`
 3) `sudo kubeadm init --token-ttl=0 --pod-network-cidr=10.244.0.0/16` to initialize kubeadm with the Flannel cidr default
   - When this command finishes, save the `kubeadm join` command provided by `kubeadm init` for later
 4) Run following commands after `kubeadm init` finishes
-```
+```bash
 mkdir -p $HOME/.kube
 sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
@@ -230,21 +229,21 @@ sudo chown $(id -u):$(id -g) $HOME/.kube/config
 kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
 ```
 7) Run the `kubeadm join` command saved in step 3, on all worker nodes, an example join command is provided below
-```
+```bash
 kubeadm join 192.168.29.229:6443 --token 2t9e17.m8jbybvnnheqwwjp \
     --discovery-token-ca-cert-hash sha256:4ca2fa33d228075da93f5cb3d8337931b32c8de280a664726fe6fc73fba89563
 ```
 
 #### Side Notes
 - To uninstall K8s use the following commands
-```
+```bash
 kubeadm reset
 sudo apt-get purge kubeadm kubectl kubelet kubernetes-cni kube*   
 sudo apt-get autoremove  
 sudo rm -rf ~/.kube
 ```
 - To uninstall Docker use the following commands
-```
+```bash
 sudo apt-get purge docker-ce docker-ce-cli containerd.io
 sudo rm -rf /var/lib/docker
 sudo rm -rf /var/lib/containerd
@@ -256,7 +255,7 @@ sudo rm -rf /var/lib/containerd
 [FATAL] plugin/loop: Loop (127.0.0.1:34536 -> :53) detected for zone ".", see coredns.io/plugins/loop#troubleshooting
 ```
 - Run the following if `kubectl get nodes` is not working; [this thread](https://discuss.kubernetes.io/t/the-connection-to-the-server-host-6443-was-refused-did-you-specify-the-right-host-or-port/552/28) discusses why `kubectl get nodes` may not be working and some potential solutions to prevent having to always run the below commands
-```
+```bash
 sudo -i
 swapoff -a
 exit
