@@ -263,7 +263,6 @@ swapoff -a
 exit
 strace -eopenat kubectl version
 ```
-  - 
 - `kubectl logs -n kube-system kube-flannel-ds-<pod-id>` to get logs of a specific Flannel pod
 - I also ran into [some issues](https://github.com/coreos/flannel/issues/1060) with the master node Flannel pod; this problem was resolved by running the following in order
   - `sudo ip link delete flannel.1` on the master node (RPi jump box)
