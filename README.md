@@ -9,8 +9,9 @@ Wrapic is a wireless Raspberry Pi cluster running various containerized applicat
   - [Worker Node Setup](https://github.com/zakattack9/WRaPiC#worker-node-setup)
   - [Master Node Setup](https://github.com/zakattack9/WRaPiC#master-node-setup)
 - [Extra Configurations](https://github.com/zakattack9/WRaPiC#extra-configurations)
-  - [Configure iTerm2 Window Arrangement and Profile](https://github.com/zakattack9/WRaPiC#installing-calico-cni)
-  - [Installing Calico CNI](https://github.com/zakattack9/WRaPiC#configure-iterm-window-arrangement-and-profiles)
+  - [Configure iTerm2 Window Arrangement and Profile](https://github.com/zakattack9/WRaPiC#configure-iterm-window-arrangement-and-profiles)
+  - [Installing Calico CNI](https://github.com/zakattack9/WRaPiC#installing-calico-cni)
+  - [Install zsh w/Oh-my-zsh and Configure Plugins](https://github.com/zakattack9/WRaPiC#install-zsh-wohmyzsh-and-configure-plugins)
 - [References](https://github.com/zakattack9/WRaPiC#references)
 
 As a disclaimer, most of these steps have been adapted from multiple articles, guides, and documentations found online. Much credit goes to Alex Ellis' [Kubernetes on Raspian](https://github.com/teamserverless/k8s-on-raspbian) repository and Tim Downey's [Baking a Pi Router](https://downey.io/blog/create-raspberry-pi-3-router-dhcp-server/) guide.
@@ -36,7 +37,7 @@ My cluster only includes 4 RPi 4B's though there is no limit to the amount of RP
 In headless setup, only WiFi and ssh are used to configure the RPi's without the need for an external monitor and keyboard. This will likely be the most tedious and time consuming part of the set up. These steps should be repeated individually for each RPi with only one RPi being connected to the network at a given time; this makes it easier to find and distinguish the RPi's in step 5.
 
 1) Install Raspberry Pi OS Lite (32-bit) with [Raspberry Pi Imager](https://www.raspberrypi.org/software/)
-  - As an alternative, the [Raspberry Pi OS (64-bit) beta](https://www.raspberrypi.org/forums/viewtopic.php?p=1668160) may be installed instead if you plan to use arm64 Docker images or would like to use Calico as your K8s CNI; it is important to note that the 64-bit beta includes the full Raspberry Pi OS which includes the desktop GUI and therefore may contain unneeded packages/bulk.
+  - As an alternative, the [Raspberry Pi OS (64-bit) beta](https://www.raspberrypi.org/forums/viewtopic.php?p=1668160) may be installed instead if you plan to use arm64 Docker images or would like to use Calico as your K8s CNI; it is important to note that the 64-bit beta is the full Raspberry Pi OS which includes the desktop GUI and therefore may contain unneeded packages/bulk.
   - Another great option if an arm64 architecture is desired, is to install the officially supported 64-bit Ubuntu Server OS using the Raspberry Pi Imager.
 2) Create an empty `ssh` file (no extension) in the root directory of the micro sd card 
 3) Create a `wpa_supplicant.conf` in the `boot` folder to [set up a WiFi connection](https://www.raspberrypi.org/documentation/configuration/wireless/headless.md)
@@ -154,7 +155,7 @@ no-resolv
 8) ssh back into the RPi jump box and ensure that dnsmasq is running with `sudo service dnsmasq status`
 9) `sudo nano /etc/sysctl.conf` and uncomment `net.ipv4.ip_forward=1` to enable IPv4 forwarding
 10) Add the following `iptables` rules to enable port forwarding
-```console
+```bash
 sudo iptables -t nat -A POSTROUTING -o wlan0 -j MASQUERADE
 sudo iptables -A FORWARD -i wlan0 -o eth0 -m state --state RELATED,ESTABLISHED -j ACCEPT
 sudo iptables -A FORWARD -i eth0 -o wlan0 -j ACCEPT
@@ -180,7 +181,7 @@ These steps should be performed on all RPi's within the cluster *including* the 
 ```bash
 curl -sSL get.docker.com | sh && sudo usermod pi -aG docker
 ```
-  - Note this specific script must be used as specified in the [Docker Documentation](https://docs.docker.com/engine/install/debian/#install-using-the-convenience-script)
+  - Note this specific script must be used as specified in the [Docker documentation](https://docs.docker.com/engine/install/debian/#install-using-the-convenience-script)
 ##### Install a specific version of Docker
 ```bash
 export VERSION=<version> && curl -sSL get.docker.com | sh
@@ -295,11 +296,39 @@ strace -eopenat kubectl version
 - `ssh -t pi@routerPi.local 'ssh pi@workerNode2Pi.local'`
 - `ssh -t pi@routerPi.local 'ssh pi@workerNode3Pi.local'`
 
+### Install zsh w/Oh-my-zsh and Configure Plugins
+1) `sudo apt-get install zsh`
+2) `chsh -s $(which zsh)` to install default shell to zsh
+3) `sudo apt-get install git wget` to install `git` and `wget` packages
+4) Install Oh-my-zsh framework
+```bash
+wget https://github.com/robbyrussell/oh-my-zsh/raw/master/tools/install.sh -O - | zsh
+cp ~/.oh-my-zsh/templates/zshrc.zsh-template ~/.zshrc
+source .zshrc
+```
+5) Install zsh syntax highlighting plugin
+```bash
+git clone https://github.com/zsh-users/zsh-syntax-highlighting.git
+mv zsh-syntax-highlighting ~/.oh-my-zsh/plugins
+echo "source ~/.oh-my-zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" >> ~/.zshrc
+```
+6) Install zsh auto-suggestions plugin
+```bash
+git clone https://github.com/zsh-users/zsh-autosuggestions
+mv zsh-autosuggestions ~/.oh-my-zsh/custom/plugins
+```
+7) `sudo nano ~/.zshrc` and modify the plugin list to include the following
+```bash
+plugins=(git docker docker zsh-autosuggestions)
+```
+8) `source .zshrc` to refresh shell
+
 ## References
 - [Disabling swap](https://www.raspberrypi.org/forums/viewtopic.php?p=1488821)
 - [Alex Ellis' K8s on Raspian repo](https://github.com/teamserverless/k8s-on-raspbian)
 - [Tim Downey's RPi Router guide](https://downey.io/blog/create-raspberry-pi-3-router-dhcp-server/)
 - [Richard Youngkin's K8s cluster guide](https://medium.com/better-programming/how-to-set-up-a-raspberry-pi-cluster-ff484a1c6be9)
+- [Install zsh on Linux](https://linoxide.com/tools/install-zsh-on-linux/)
 
 ## TODO
 - setup ansible playbooks:
