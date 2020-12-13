@@ -1,5 +1,5 @@
 # Wrapic Documentation
-Wrapic is a wireless Raspberry Pi cluster running various containerized applications on top of full Kubernetes. In my setup, a single 5-port PoE switch provides power to four RPi's all of which are equipped with PoE hats. One Raspberry Pi acts as a jump box connecting to an external network through WiFi and forwarding traffic through its ethernet port; this provides the other 3 RPi's with an internet connection and separates the cluster onto its own private network.
+Wrapic is a wireless Raspberry Pi cluster running various containerized applications on top of full Kubernetes. In my setup, a single 5-port PoE switch provides power to four RPi's all of which are equipped with PoE hats. One Raspberry Pi acts as a jump box connecting to an external network through WiFi and forwarding traffic through its ethernet port; this provides the other 3 RPi's with an internet connection and separates the cluster onto its own private network. The jump box also acts as the Kubernetes master node and all other RPi's are considered worker nodes in the cluster.
 
 ### Contents
 - Parts List
@@ -83,7 +83,7 @@ sudo dphys-swapfile swapoff && sudo dphys-swapfile uninstall && sudo update-rc.d
 ```
 - should backup SSH keys
 
-## Setting up RPi Router and Cluster Network
+## Setting up the RPi Jump Box and Cluster Network
 - [followed this guide to router configuration](https://downey.io/blog/create-raspberry-pi-3-router-dhcp-server/)
 - [referenced this guide for other setup tips](https://medium.com/better-programming/how-to-set-up-a-raspberry-pi-cluster-ff484a1c6be9)
 - set up wrapic0 (router) `/etc/dhcpcd.conf` see [dhcpcd.conf](https://manpages.debian.org/testing/dhcpcd5/dhcpcd.conf.5.en.html)
@@ -162,14 +162,10 @@ no-resolv
 	- `<role>` should be the same if setting the role for a node currently with role set as `<none>`
 - remove label with `kubectl label node <node-name> node-role.kubernetes.io/<role>-`
 
-## Configure iTerm Window Arrangement and Profiles
-- `ssh pi@routerPi.local`
-- `ssh -t pi@routerPi.local 'ssh pi@workerNode1.local'`
-- `ssh -t pi@routerPi.local 'ssh pi@workerNode2Pi.local'`
-- `ssh -t pi@routerPi.local 'ssh pi@workerNode3Pi.local'`
+## Installing Docker and Kubernetes w/Flannel CNI
+### Worker Node Setup
+These steps should be performed on all RPi's within the cluster *including* the jump box/master node.
 
-## Installing Docker & Kubernetes
-#### Done for all RPis
 - install latest version of Docker 
 	- must use this script as specified in Docker docs [Install Docker Engine on Debian | Docker Documentation](https://docs.docker.com/engine/install/debian/#install-using-the-convenience-script)
 ```bash
@@ -198,7 +194,7 @@ curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add
 ```
 - `sudo sysctl net.bridge.bridge-nf-call-iptables=1`
 
-#### Done only for Master Node RPi
+### Master Node Setup
 - `sudo kubeadm config images pull -v3`
 - ensure that `/etc/resolv.conf` does not have `nameserver 127.0.0.1` 
 	- if `nameserver 127.0.0.1` exists, remove and use `nameserver 1.1.1.1`
@@ -272,6 +268,12 @@ strace -eopenat kubectl version
 #### Side Notes:
 - Calico could be used but it would require installation of an arm64 Raspian image (currently in beta)
 	- Calico only supports amd64 and arm64 (as of 12/10)
+
+## Configure iTerm Window Arrangement and Profiles
+- `ssh pi@routerPi.local`
+- `ssh -t pi@routerPi.local 'ssh pi@workerNode1.local'`
+- `ssh -t pi@routerPi.local 'ssh pi@workerNode2Pi.local'`
+- `ssh -t pi@routerPi.local 'ssh pi@workerNode3Pi.local'`
 
 ## TODO
 - setup ansible playbooks:
