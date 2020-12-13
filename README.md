@@ -251,11 +251,10 @@ sudo rm -rf /var/lib/containerd
 ```
 - `kubectl rollout restart -n kube-system deployment/coredns` to restart coredns pods
 - `kubectl logs -n kube-system pod/coredns-<pod-id>` to get the logs of a specific coredns pod
-- I was getting the following error in the coredns logs for the coredns pods after starting up kubeadm
+- I was getting the following error in the coredns logs for the coredns pods after starting up kubeadm in which the [linked coredns docs](https://coredns.io/plugins/loop/#troubleshooting) recommends adding `resolvConf: /etc/resolv.conf` to `/etc/kubernetes/kubelet.conf`; however, the solution for me was removing `nameserver 127.0.0.1` from `/etc/resolv.conf` before running `kubeadm init`
 ```
 [FATAL] plugin/loop: Loop (127.0.0.1:34536 -> :53) detected for zone ".", see coredns.io/plugins/loop#troubleshooting
 ```
-  - The [linked coredns docs](https://coredns.io/plugins/loop/#troubleshooting) recommends adding `resolvConf: /etc/resolv.conf` to `/etc/kubernetes/kubelet.conf` though the solution was removing `nameserver 127.0.0.1` from `/etc/resolv.conf` before running `kubeadm init`
 - Run the following if `kubectl get nodes` is not working; [this thread](https://discuss.kubernetes.io/t/the-connection-to-the-server-host-6443-was-refused-did-you-specify-the-right-host-or-port/552/28) discusses why `kubectl get nodes` may not be working and some potential solutions to prevent having to always run the below commands
 ```
 sudo -i
