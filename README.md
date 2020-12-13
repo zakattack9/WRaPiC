@@ -1,7 +1,8 @@
 # Wrapic Documentation
-WRaPiC is a wireless Raspberry Pi cluster running various containerized applications on top of full Kubernetes. In my setup, a single 5-port PoE switch provides power to four RPi's all of which are equipped with PoE hats. One Raspberry Pi acts as a jump box connecting to an external network through WiFi and forwarding traffic through its ethernet port; this provides the other 3 RPi's with an internet connection and separates the cluster onto its own private network.
+Wrapic is a wireless Raspberry Pi cluster running various containerized applications on top of full Kubernetes. In my setup, a single 5-port PoE switch provides power to four RPi's all of which are equipped with PoE hats. One Raspberry Pi acts as a jump box connecting to an external network through WiFi and forwarding traffic through its ethernet port; this provides the other 3 RPi's with an internet connection and separates the cluster onto its own private network.
 
-  #### Contents
+### Contents
+- Parts List
 - Initial Headless RPi Setup
 - Setting up the RPi Jump Box and Cluster Network
 - Installing Docker and Kubernetes w/Flannel CNI
@@ -10,10 +11,30 @@ WRaPiC is a wireless Raspberry Pi cluster running various containerized applicat
 - Configure iTerm2 Window Arrangement and Profile
 - Installing Calico CNI
 
+## Parts List
+My cluster only includes 4 RPi 4B's though there is no limit to the amount of RPi's that can be used. If you choose to not go the PoE route, additional micro USB cables and a USB power hub will be needed to power the Pi's.
+- **4x** Raspberry Pi 4B 2GB RAM
+  - the 3B and 3B+ models will also suffice
+  - it is recommended to get at least 2GB of RAM if running full K8s
+- **4x** Official Raspberry Pi PoE Hats
+- 5 Port PoE Gigabit Ethernet Switch
+  - does not need to support PoE if you are not planning to purchase PoE hats
+  - does not need to support gigabit ethernet though the Pi 4's do support it
+- **4x** 0.5ft Ethernet Cables
+  - I went with 0.5ft cables to keep my setup compact
+  - at the very least, a Cat 5e cable is needed to support gigabit ethernet
+- **4x** 32GB MicroSD cards
+  - I'd recommend sticking to a reputable brand
+- Raspberry Pi Cluster Case
+  - one with good ventilation and heat dissipation is recommended 
+
 ## Initial Headless RPi Setup
 In headless setup, only WiFi and ssh are used to configure the RPi's without the need for an external monitor and keyboard.
-- install Raspberry Pi OS Lite (32-bit) w/Raspberry Pi Imager 
-- create `ssh` file in root directory of micro sd card
+
+1) Install Raspberry Pi OS Lite (32-bit) with [Raspberry Pi Imager](https://www.raspberrypi.org/software/)
+  - As an alternative, the [Raspberry Pi OS (64-bit) beta](https://www.raspberrypi.org/forums/viewtopic.php?p=1668160) may be installed instead if you plan to use arm64 Docker images or would like to use Calico as your K8s CNI; it is important to note that the 64-bit beta includes the full Raspberry Pi OS which includes the desktop GUI and therefore may contain unneeded packages/bulk.
+  - Another great option if an arm64 architecture is desired, is to install the officially supported 64-bit Ubuntu Server OS using the Raspberry Pi Imager.
+2) Create `ssh` file in root directory of micro sd card
 - [set up WiFi connection](https://www.raspberrypi.org/documentation/configuration/wireless/headless.md)
 - `wpa_supplicant.conf` 
 ```
