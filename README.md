@@ -301,7 +301,7 @@ This section includes instructions for various installations and configurations 
 - `ssh -t pi@routerPi.local 'ssh pi@workerNode3Pi.local'`
 
 ### Install zsh w/Oh-my-zsh and Configure Plugins
-1) `sudo apt-get install zsh` to install [zsh](http://zsh.sourceforge.net/)
+1) `sudo apt-get install zsh` to install [Z shell (zsh)](http://zsh.sourceforge.net/)
 2) `chsh -s $(which zsh)` to install default shell to zsh
 3) `sudo apt-get install git wget` to install git and wget packages
 4) Install [Oh-my-zsh](https://github.com/ohmyzsh/ohmyzsh) framework
@@ -326,7 +326,7 @@ mv zsh-autosuggestions ~/.oh-my-zsh/custom/plugins
 plugins=(git docker docker zsh-autosuggestions)
 ```
 8) `source .zshrc` to refresh shell
-9) Install [powerlevel10k](https://github.com/romkatv/powerlevel10k) theme
+9) Install [Powerlevel10k](https://github.com/romkatv/powerlevel10k) theme
 ```bash
 git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
 ```
