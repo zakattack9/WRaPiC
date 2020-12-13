@@ -13,7 +13,7 @@ Wrapic is a wireless Raspberry Pi cluster running various containerized applicat
   - [Installing Calico CNI](https://github.com/zakattack9/WRaPiC#configure-iterm-window-arrangement-and-profiles)
 - [References](https://github.com/zakattack9/WRaPiC#references)
 
-As a disclaimer, these steps have been adapted from multiple articles, guides, and documentations found online. Much credit goes to Alex Ellis' [Kubernetes on Raspian](https://github.com/teamserverless/k8s-on-raspbian) repository and Tim Downey's [Baking a Pi Router](https://downey.io/blog/create-raspberry-pi-3-router-dhcp-server/) guide.
+As a disclaimer, most of these steps have been adapted from multiple articles, guides, and documentations found online. Much credit goes to Alex Ellis' [Kubernetes on Raspian](https://github.com/teamserverless/k8s-on-raspbian) repository and Tim Downey's [Baking a Pi Router](https://downey.io/blog/create-raspberry-pi-3-router-dhcp-server/) guide.
 
 ## Parts List
 My cluster only includes 4 RPi 4B's though there is no limit to the amount of RPi's that can be used. If you choose to not go the PoE route, additional micro USB cables and a USB power hub will be needed to power the Pi's.
@@ -33,7 +33,7 @@ My cluster only includes 4 RPi 4B's though there is no limit to the amount of RP
   - one with good ventilation and heat dissipation is recommended 
 
 ## Initial Headless Raspberry Pi Setup
-In headless setup, only WiFi and ssh are used to configure the RPi's without the need for an external monitor and keyboard. This will likely be the most tedious and time consuming part of the set up. These steps should be repeated individually for each RPi.
+In headless setup, only WiFi and ssh are used to configure the RPi's without the need for an external monitor and keyboard. This will likely be the most tedious and time consuming part of the set up. These steps should be repeated individually for each RPi with only one RPi being connected to the network at a given time; this makes it easier to find and distinguish the RPi's in step 5.
 
 1) Install Raspberry Pi OS Lite (32-bit) with [Raspberry Pi Imager](https://www.raspberrypi.org/software/)
   - As an alternative, the [Raspberry Pi OS (64-bit) beta](https://www.raspberrypi.org/forums/viewtopic.php?p=1668160) may be installed instead if you plan to use arm64 Docker images or would like to use Calico as your K8s CNI; it is important to note that the 64-bit beta includes the full Raspberry Pi OS which includes the desktop GUI and therefore may contain unneeded packages/bulk.
@@ -51,63 +51,52 @@ network={
 }
 ```
 4) Insert the micro SD card back into the Pi and power it on
-5) Connect to RPi using one of the following methods below
-	- with `ssh pi@raspberrypi.local`
-	- use `ping raspberrypi.local` to get RPi IP address
-- once SSHed can double check RPi IP address with `ip addr show` (look for wlan0 IP)
-- optionally [set up a static IP address if needed](https://www.raspberrypi.org/documentation/configuration/tcpip/)
-- `sudo raspi-config` to access RPi setup config menu
-	- change raspberry pi password
-	- change network hostname for ssh
-	- expand the filesystem, under advanced options, allowing use of full SD card for OS
-	- update raspberry pi operating system
-	- change locale
-- reboot pi with `sudo reboot`
-- set up [passwordless SSH access](https://www.raspberrypi.org/documentation/remote-access/ssh/passwordless.md)
-	- if RSA pub/private keys are generated just need to run:
-	`ssh-copy-id <USERNAME>@<IP-ADDRESS>`
-- `sudo apt-get update -y` to update the package repository that apt-get uses
-- `sudo apt-get upgrade -y` to update all installed packages
-- [disable swap](https://www.raspberrypi.org/forums/viewtopic.php?p=1488821) with the command (run individually):
-	- run individually to prevent errors with `kubectl get`
+5) Connect to the RPi by running `ssh pi@raspberrypi.local`; you can also use `ping raspberrypi.local` to get the RPi's IP address then use `ssh pi@<ip-address>`
+6) Use `sudo raspi-config` to access the RPi configuration menu:
+	- Change the password from its default `raspberry`
+	- Change the hostname which can be used for easier ssh 
+	- Expand the filesystem, under advanced options, allowing the full use of the SD card for the OS
+	- Update the operating system to the latest version
+	- Change the locale
+7) Reboot the RPi with `sudo reboot`
+8) Set up [passwordless SSH access](https://www.raspberrypi.org/documentation/remote-access/ssh/passwordless.md):
+	- if you have previously generated RSA public/private keys execute `ssh-copy-id <USERNAME>@<IP-ADDRESS or HOSTNAME>`
+9) Update the package repository with `sudo apt-get update -y`
+10) Update all installed packages with `sudo apt-get upgrade -y`
+11) Disable swap with the following commands—it's recommended to run the commands individually to prevent some errors with `kubectl get` later on
 ```
 sudo dphys-swapfile swapoff
 sudo dphys-swapfile uninstall
 sudo systemctl disable dphys-swapfile
 ```
-- `sudo nano /etc/dphys-swapfile` and set `CONF_SWAPSIZE=0`
 
 #### Side Notes:
-- may need to comment out `SendEnv LANG LC_*` in `/etc/ssh/ssh_config` on host SSH client (Mac) to fix RPi locale problem
-- check if swap is disabled with `free -h` look for “Swap:”
-	- may also use `sudo swapon —summary` (should return nothing)
-- this disable swap command did not seem to work on RPi Buster (the one above should be used)
+- May need to comment out `SendEnv LANG LC_*` in `/etc/ssh/ssh_config` on host SSH client to fix RPi locale problems
+- Check if swap is disabled with `free -h` (look for “Swap:”); may also use `sudo swapon —summary` which should return nothing
+- If swap is still not disabled after reboot, try editing `/etc/dphys-swapfile` and set `CONF_SWAPSIZE=0`
+- While mentioned frequently, this disable swap command did not seem to work on RPi Buster (the one above should be used)
 ```
 sudo dphys-swapfile swapoff && sudo dphys-swapfile uninstall && sudo update-rc.d dphys-swapfile remove
 ```
-- should backup SSH keys
 
 ## Setting up the Jump Box and Cluster Network
-- [followed this guide to router configuration](https://downey.io/blog/create-raspberry-pi-3-router-dhcp-server/)
-- [referenced this guide for other setup tips](https://medium.com/better-programming/how-to-set-up-a-raspberry-pi-cluster-ff484a1c6be9)
-- set up wrapic0 (router) `/etc/dhcpcd.conf` see [dhcpcd.conf](https://manpages.debian.org/testing/dhcpcd5/dhcpcd.conf.5.en.html)
-	- declares static IP for ethernet port and WiFi
-	- note that the static IP address for wlan0 should be within the range of the DHCP pool on the router
+1) Set up a [static IP address](https://www.raspberrypi.org/documentation/configuration/tcpip/) for both ethernet and WiFi interfaces by creating a [dhcpcd.conf](https://manpages.debian.org/testing/dhcpcd5/dhcpcd.conf.5.en.html) in `/etc/`
+  - A sample `dhcpcd.conf` is provided [here](./dhcpcd.conf)
+  - Note that the static IP address for `wlan0` should be within the DHCP pool range on the router
 ```
 interface eth0
-static ip_address=10.0.0.1/8
-static domain_name_servers=1.1.1.1,1.0.0.1
+static ip_address=<static-ip-address>
+static domain_name_servers=<dns-ip-address>
 nolink
 
 interface wlan0
-static ip_address=192.168.29.229/24
-static routers=192.168.29.1
-static domain_name_servers=1.1.1.1,1.0.0.1
+static ip_address=<static-ip-address>
+static routers=<router-ip-address>
+static domain_name_servers=<dns-ip-address>
 ```
-
-- install `dnsmasq` with `sudo apt install dnsmasq` 
-- backup existing `/etc/dnsmasq.conf`
-- add to `/etc/dnsmasq.conf`
+3) Install [dnsmasq](https://www.linux.org/docs/man8/dnsmasq.html) with `sudo apt install dnsmasq` 
+4) Backup existing `dnsmasq.conf` with `sudo mv /etc/dnsmasq.conf /etc/dnsmasq.conf.backup`
+5) Create a new dnsmasq config file with `sudo nano /etc/dnsmasq.conf` and add the following
 ```bash
 # Provide a DHCP service over our eth0 adapter (ethernet port)
 interface=eth0
@@ -150,9 +139,9 @@ no-resolv
 # log-queries
 # log-dhcp
 ```
-
-- `DNSMASQ_EXCEPT=lo` to the end of `/etc/default/dnsmasq` see [here](https://raspberrypi.stackexchange.com/questions/37439/proper-way-to-prevent-dnsmasq-from-overwriting-dns-server-list-supplied-by-dhcp)
-	- needed to prevent overwriting `/etc/resolv.conf` which can break the coredns pods in later kubeadm init
+6) Edit `/etc/default/dnsmasq` and add `DNSMASQ_EXCEPT=lo` at the end of the file
+	- This is needed to [prevent dnsmasq from overwriting](https://raspberrypi.stackexchange.com/questions/37439/proper-way-to-prevent-dnsmasq-from-overwriting-dns-server-list-supplied-by-dhcp) `/etc/resolv.conf` on reboot which can crash the coredns pods when later initializing kubeadm
+7) To prevent errors with booting up dnsmasq, use `sudo nano /etc/init.d/dnsmasq` and add `sleep 10` to the top of the file
 - use `sudo dpkg-reconfigure iptables-persistent` to re-save iptables and persist them 
 
 #### Side Notes:
@@ -281,7 +270,10 @@ strace -eopenat kubectl version
 - `ssh -t pi@routerPi.local 'ssh pi@workerNode3Pi.local'`
 
 ## References
-
+- [Disabling swap](https://www.raspberrypi.org/forums/viewtopic.php?p=1488821)
+- [Alex Ellis' K8s on Raspian repo](https://github.com/teamserverless/k8s-on-raspbian)
+- [Tim Downey's RPi Router guide](https://downey.io/blog/create-raspberry-pi-3-router-dhcp-server/)
+- [Richard Youngkin's K8s cluster guide](https://medium.com/better-programming/how-to-set-up-a-raspberry-pi-cluster-ff484a1c6be9)
 
 ## TODO
 - setup ansible playbooks:
