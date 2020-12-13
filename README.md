@@ -3,14 +3,17 @@ Wrapic is a wireless Raspberry Pi cluster running various containerized applicat
 
 ### Contents
 - [Parts List](https://github.com/zakattack9/WRaPiC#parts-list)
-- [Initial Headless RPi Setup](https://github.com/zakattack9/WRaPiC#initial-headless-rpi-setup)
+- [Initial Headless Raspberry Pi Setup](https://github.com/zakattack9/WRaPiC#initial-headless-raspberry-pi-setup)
 - [Setting up the Jump Box and Cluster Network](https://github.com/zakattack9/WRaPiC#setting-up-the-jump-box-and-cluster-network)
 - [Installing Docker and Kubernetes w/Flannel CNI](https://github.com/zakattack9/WRaPiC#installing-docker-and-kubernetes-wflannel-cni)
   - [Worker Node Setup](https://github.com/zakattack9/WRaPiC#worker-node-setup)
   - [Master Node Setup](https://github.com/zakattack9/WRaPiC#master-node-setup)
-- [Extra Configurations]
-  - Configure iTerm2 Window Arrangement and Profile
-  - Installing Calico CNI
+- [Extra Configurations](https://github.com/zakattack9/WRaPiC#extra-configurations)
+  - [Configure iTerm2 Window Arrangement and Profile](https://github.com/zakattack9/WRaPiC#installing-calico-cni)
+  - [Installing Calico CNI](https://github.com/zakattack9/WRaPiC#configure-iterm-window-arrangement-and-profiles)
+- [References](https://github.com/zakattack9/WRaPiC#references)
+
+As a disclaimer, these steps have been adapted from multiple articles, guides, and documentations found online. Much credit goes to Alex Ellis' [Kubernetes on Raspian](https://github.com/teamserverless/k8s-on-raspbian) repository and Tim Downey's [Baking a Pi Router](https://downey.io/blog/create-raspberry-pi-3-router-dhcp-server/) guide.
 
 ## Parts List
 My cluster only includes 4 RPi 4B's though there is no limit to the amount of RPi's that can be used. If you choose to not go the PoE route, additional micro USB cables and a USB power hub will be needed to power the Pi's.
@@ -24,20 +27,19 @@ My cluster only includes 4 RPi 4B's though there is no limit to the amount of RP
 - *4x* 0.5ft Ethernet Cables
   - I went with 0.5ft cables to keep my setup compact
   - at the very least, a Cat 5e cable is needed to support gigabit ethernet
-- *4x* 32GB MicroSD cards
+- *4x* 32GB Micro SD cards
   - I'd recommend sticking to a reputable brand
 - Raspberry Pi Cluster Case
   - one with good ventilation and heat dissipation is recommended 
 
-## Initial Headless RPi Setup
-In headless setup, only WiFi and ssh are used to configure the RPi's without the need for an external monitor and keyboard.
+## Initial Headless Raspberry Pi Setup
+In headless setup, only WiFi and ssh are used to configure the RPi's without the need for an external monitor and keyboard. This will likely be the most tedious and time consuming part of the set up. These steps should be repeated individually for each RPi.
 
 1) Install Raspberry Pi OS Lite (32-bit) with [Raspberry Pi Imager](https://www.raspberrypi.org/software/)
   - As an alternative, the [Raspberry Pi OS (64-bit) beta](https://www.raspberrypi.org/forums/viewtopic.php?p=1668160) may be installed instead if you plan to use arm64 Docker images or would like to use Calico as your K8s CNI; it is important to note that the 64-bit beta includes the full Raspberry Pi OS which includes the desktop GUI and therefore may contain unneeded packages/bulk.
   - Another great option if an arm64 architecture is desired, is to install the officially supported 64-bit Ubuntu Server OS using the Raspberry Pi Imager.
-2) Create `ssh` file in root directory of micro sd card
-- [set up WiFi connection](https://www.raspberrypi.org/documentation/configuration/wireless/headless.md)
-- `wpa_supplicant.conf` 
+2) Create an empty `ssh` file (no extension) in the root directory of the micro sd card 
+3) Create a `wpa_supplicant.conf` also in the root directory to [set up a WiFi connection](https://www.raspberrypi.org/documentation/configuration/wireless/headless.md)
 ```
 ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
 update_config=1
@@ -48,7 +50,8 @@ network={
   psk="<insert WiFi password>"
 }
 ```
-- connect to RPi:
+4) Insert the micro SD card back into the Pi and power it on
+5) Connect to RPi using one of the following methods below
 	- with `ssh pi@raspberrypi.local`
 	- use `ping raspberrypi.local` to get RPi IP address
 - once SSHed can double check RPi IP address with `ip addr show` (look for wlan0 IP)
@@ -276,6 +279,9 @@ strace -eopenat kubectl version
 - `ssh -t pi@routerPi.local 'ssh pi@workerNode1.local'`
 - `ssh -t pi@routerPi.local 'ssh pi@workerNode2Pi.local'`
 - `ssh -t pi@routerPi.local 'ssh pi@workerNode3Pi.local'`
+
+## References
+
 
 ## TODO
 - setup ansible playbooks:
