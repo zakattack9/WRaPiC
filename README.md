@@ -1,7 +1,7 @@
 # Wrapic Documentation
 WRaPiC is a wireless Raspberry Pi cluster running various containerized applications on top of full Kubernetes. In my setup, a single 5-port PoE switch provides power to four RPi's all of which are equipped with PoE hats. One Raspberry Pi acts as a jump box connecting to an external network through WiFi and forwarding traffic through its ethernet port; this provides the other 3 RPi's with an internet connection and separates the cluster onto its own private network.
 
-### Contents
+  #### Contents
 - Initial Headless RPi Setup
 - Setting up the RPi Jump Box and Cluster Network
 - Installing Docker and Kubernetes w/Flannel CNI
@@ -11,7 +11,7 @@ WRaPiC is a wireless Raspberry Pi cluster running various containerized applicat
 - Installing Calico CNI
 
 ## Initial Headless RPi Setup
-In headless setup, only WiFi and ssh are used to configure the RPi's and without the need for an external monitor and keyboard.
+In headless setup, only WiFi and ssh are used to configure the RPi's without the need for an external monitor and keyboard.
 - install Raspberry Pi OS Lite (32-bit) w/Raspberry Pi Imager 
 - create `ssh` file in root directory of micro sd card
 - [set up WiFi connection](https://www.raspberrypi.org/documentation/configuration/wireless/headless.md)
