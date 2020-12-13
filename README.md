@@ -99,9 +99,9 @@ static domain_name_servers=<dns-ip-address>
 ```
   - A sample `dhcpcd.conf` is provided [here](./dhcpcd.conf)
   - Note that the static IP address for `wlan0` should be within the DHCP pool range on the router
-3) `sudo apt install dnsmasq` to install [dnsmasq](https://www.linux.org/docs/man8/dnsmasq.html) 
-4) `sudo mv /etc/dnsmasq.conf /etc/dnsmasq.conf.backup` to backup the existing `dnsmasq.conf`
-5) Create a new dnsmasq config file with `sudo nano /etc/dnsmasq.conf` and add the following
+2) `sudo apt install dnsmasq` to install [dnsmasq](https://www.linux.org/docs/man8/dnsmasq.html) 
+3) `sudo mv /etc/dnsmasq.conf /etc/dnsmasq.conf.backup` to backup the existing `dnsmasq.conf`
+4) Create a new dnsmasq config file with `sudo nano /etc/dnsmasq.conf` and add the following
 ```bash
 # Provide a DHCP service over our eth0 adapter (ethernet port)
 interface=eth0
@@ -147,20 +147,20 @@ no-resolv
   - Note that the `listen-address` is the same as the `static ip-address` for `eth0` declared in `dhcpcd.conf`
   - If you have more or less than three worker nodes, declare or delete `dhcp-host` as needed ensuring that the correct MAC addresses are used
   - `ifconfig eth0` can be used to find each RPi’s MAC address (look next to “ether”)
-6) `sudo nano /etc/default/dnsmasq` and add `DNSMASQ_EXCEPT=lo` at the end of the file
+5) `sudo nano /etc/default/dnsmasq` and add `DNSMASQ_EXCEPT=lo` at the end of the file
   - This is needed to [prevent dnsmasq from overwriting](https://raspberrypi.stackexchange.com/questions/37439/proper-way-to-prevent-dnsmasq-from-overwriting-dns-server-list-supplied-by-dhcp) `/etc/resolv.conf` on reboot which can crash the coredns pods when later initializing kubeadm
-7) `sudo nano /etc/init.d/dnsmasq` and add `sleep 10` to the top of the file to prevent errors with booting up dnsmasq
-8) `sudo reboot` to reboot the RPi for dnsmasq changes to take effect
-9) ssh back into the RPi jump box and ensure that dnsmasq is running with `sudo service dnsmasq status`
-10) `sudo nano /etc/sysctl.conf` and uncomment `net.ipv4.ip_forward=1` to enable IPv4 forwarding
-11) Add the following `iptables` rules to enable port forwarding
-```bash
+6) `sudo nano /etc/init.d/dnsmasq` and add `sleep 10` to the top of the file to prevent errors with booting up dnsmasq
+7) `sudo reboot` to reboot the RPi for dnsmasq changes to take effect
+8) ssh back into the RPi jump box and ensure that dnsmasq is running with `sudo service dnsmasq status`
+9) `sudo nano /etc/sysctl.conf` and uncomment `net.ipv4.ip_forward=1` to enable IPv4 forwarding
+10) Add the following `iptables` rules to enable port forwarding
+```console
 sudo iptables -t nat -A POSTROUTING -o wlan0 -j MASQUERADE
 sudo iptables -A FORWARD -i wlan0 -o eth0 -m state --state RELATED,ESTABLISHED -j ACCEPT
 sudo iptables -A FORWARD -i eth0 -o wlan0 -j ACCEPT
 ```
-12) `sudo apt install iptables-persistent` to install iptables-persistent
-13) `sudo dpkg-reconfigure iptables-persistent` to re-save and persist our `iptables` rules across reboots
+11) `sudo apt install iptables-persistent` to install iptables-persistent
+12) `sudo dpkg-reconfigure iptables-persistent` to re-save and persist our `iptables` rules across reboots
 
 #### Side Notes
 - If something goes wrong, I highly recommend checking out [Tim Downey's RPi router guide](https://downey.io/blog/create-raspberry-pi-3-router-dhcp-server/) as additional information is provided there
