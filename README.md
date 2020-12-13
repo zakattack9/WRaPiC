@@ -197,7 +197,7 @@ cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory
 ##### Install the latest version of K8s
 ```bash
 curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - && \
-  echo “deb http://apt.kubernetes.io/ kubernetes-xenial main” | sudo tee /etc/apt/sources.list.d/kubernetes.list && \
+  echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list && \
   sudo apt-get update -q && \
   sudo apt-get install -qy kubeadm
 ```
@@ -337,7 +337,7 @@ git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$
 ```bash
 ZSH_THEME="powerlevel10k/powerlevel10k"
 ```
-11) `source .zshrc` and go through p10k setup process
+11) `source .zshrc` and go through the p10k setup process
 
 ## References
 - [Disabling swap](https://www.raspberrypi.org/forums/viewtopic.php?p=1488821)
