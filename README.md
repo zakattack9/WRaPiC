@@ -72,7 +72,7 @@ sudo dphys-swapfile uninstall
 sudo systemctl disable dphys-swapfile
 ```
 
-#### Side Notes:
+#### Side Notes
 - May need to comment out `SendEnv LANG LC_*` in `/etc/ssh/ssh_config` on host SSH client to fix RPi locale problems
 - Check if swap is disabled with `free -h` (look for “Swap:”); may also use `sudo swapon —summary` which should return nothing
 - If swap is still not disabled after reboot, try editing `/etc/dphys-swapfile` and set `CONF_SWAPSIZE=0`
@@ -159,10 +159,10 @@ sudo iptables -t nat -A POSTROUTING -o wlan0 -j MASQUERADE
 sudo iptables -A FORWARD -i wlan0 -o eth0 -m state --state RELATED,ESTABLISHED -j ACCEPT
 sudo iptables -A FORWARD -i eth0 -o wlan0 -j ACCEPT
 ```
-12) `sudo apt install iptables-persistent` to install iptable-persistent for persisting our newly added `iptables` rules
-13) `sudo dpkg-reconfigure iptables-persistent` to re-save and persist our rules across reboots
+12) `sudo apt install iptables-persistent` to install iptables-persistent
+13) `sudo dpkg-reconfigure iptables-persistent` to re-save and persist our `iptables` rules across reboots
 
-#### Side Notes:
+#### Side Notes
 - If something goes wrong, I highly recommend checking out [Tim Downey's RPi router guide](https://downey.io/blog/create-raspberry-pi-3-router-dhcp-server/) as additional information is provided
 - `sudo iptables -L -n -v` to check the current `iptables` rules
 - `cat /var/lib/misc/dnsmasq.leases` to check the current leases provided by dnsmasq
@@ -170,96 +170,108 @@ sudo iptables -A FORWARD -i eth0 -o wlan0 -j ACCEPT
 - `sudo service dnsmasq stop` to stop dnsmasq (will restart on boot)
 
 ## Installing Docker and Kubernetes w/Flannel CNI
+The following steps will install and configure Docker and Kubernetes on all RPi's. This setup uses Flannel as the Kubernetes CNI although Weave Net may also be used as an alternative. Calico CNI may be swapped out for Flannel/Weave Net providing that an OS with an `arm64` architecture has been installed on all RPi's.
+
 ### Worker Node Setup
 These steps should be performed on all RPi's within the cluster *including* the jump box/master node.
 
-- install latest version of Docker 
-	- must use this script as specified in Docker docs [Install Docker Engine on Debian | Docker Documentation](https://docs.docker.com/engine/install/debian/#install-using-the-convenience-script)
+1) Install Docker
+##### Install the latest version of Docker
 ```bash
 curl -sSL get.docker.com | sh && sudo usermod pi -aG docker
 ```
-- install specific version of Docker
+  - Note this specific script must be used as specified in the [Docker Documentation](https://docs.docker.com/engine/install/debian/#install-using-the-convenience-script)
+##### Install a specific version of Docker
 ```bash
-export VERSION=19.03.13 && curl -sSL get.docker.com | sh
+export VERSION=<version> && curl -sSL get.docker.com | sh
 sudo usermod pi -aG docker
+  - Where `<version>` is replaced with a specific Docker Engine version 
 ```
-- `sudo nano /boot/cmdline.txt` and added `cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory` to end of line
-- install latest version of K8s
+2) `sudo nano /boot/cmdline.txt` and add `cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory` to end of the line
+  - Do not make a new line and ensure that there's a space in front of `cgroup_enable=cpuset`
+3) `sudo reboot` to reboot the RPi for boot changes to take effect (do not skip this step)
+4) Install Kubernetes
+##### Install the latest version of K8s
 ```bash
 curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - && \
   echo “deb http://apt.kubernetes.io/ kubernetes-xenial main” | sudo tee /etc/apt/sources.list.d/kubernetes.list && \
   sudo apt-get update -q && \
   sudo apt-get install -qy kubeadm
 ```
-- install specific version of K8s
+##### Install a specific version of K8s
 ```bash
-# install specific veresion of k8s
 curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - && \
   echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list && \
   sudo apt-get update -q && \
-  sudo apt-get install -qy kubelet=1.19.5-00 kubectl=1.19.5-00 kubeadm=1.19.5-00
+  sudo apt-get install -qy kubelet=<version> kubectl=<version> kubeadm=<version>
 ```
-- `sudo sysctl net.bridge.bridge-nf-call-iptables=1`
+  - Where `<version>` is replaced with a specific K8s version; append `-00` to the end of the version if it's not already added (e.g. 1.19.5 => 1.19.5-00)
+5) `sudo sysctl net.bridge.bridge-nf-call-iptables=1`
 
 ### Master Node Setup
-- `sudo kubeadm config images pull -v3`
-- ensure that `/etc/resolv.conf` does not have `nameserver 127.0.0.1` 
-	- if `nameserver 127.0.0.1` exists, remove and use `nameserver 1.1.1.1`
-	- also ensure that `dnsmasq` is not overwriting `/etc/resolv.conf` on startup (see above)
-	- if not fixed, will result in coredns pods crashing
-- init for flannel `sudo kubeadm init --token-ttl=0 --pod-network-cidr=10.244.0.0/16`
-- run following commands after `kubeadm init`
+These steps should be performed on only one RPi (I used the RPi jump box).
+
+1) `sudo kubeadm config images pull -v3`
+2) `sudo nano /etc/resolv.conf` and ensure that it does not have `nameserver 127.0.0.1` 
+  - If `nameserver 127.0.0.1` exists, remove it and replace it with another DNS IP address, then double check that `DNSMASQ_EXCEPT=lo` has been added in `/etc/default/dnsmasq` to prevent dnsmasq from overwriting/adding `nameserver 127.0.0.1` to `/etc/resolv.conf` upon reboot
+  - This step is crucial to prevent coredns pods from crashing upon running `kubeadm init`
+3) `sudo kubeadm init --token-ttl=0 --pod-network-cidr=10.244.0.0/16` to initialize kubeadm with the Flannel cidr default
+  - When this command finishes, save the `kubeadm join` command provided by `kubeadm init` for later
+4) Run following commands after `kubeadm init` finishes
 ```
 mkdir -p $HOME/.kube
 sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
 ```
-- double check status of master node pods `kubectl get pods -n kube-system`
-	- all pods should be running
-- apply flannel config `kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml`
-- run `kubeadm join` command on all worker nodes with command provided at the end of `kubeadm init`
+5) `kubectl get pods -n kube-system` to double check the status of all master node pods (each should have a status of "Running")
+  - If the coredns pods are failing, see the *Side Notes* for this section
+6) Apply [Flannel](https://github.com/coreos/flannel) config
+```bash
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+```
+7) Run the `kubeadm join` command saved in step 3, on all worker nodes, an example join command is provided below
 ```
 kubeadm join 192.168.29.229:6443 --token 2t9e17.m8jbybvnnheqwwjp \
     --discovery-token-ca-cert-hash sha256:4ca2fa33d228075da93f5cb3d8337931b32c8de280a664726fe6fc73fba89563
 ```
 
 #### Side Notes
-- uninstall K8s with
+- To uninstall K8s use the following commands
 ```
 kubeadm reset
 sudo apt-get purge kubeadm kubectl kubelet kubernetes-cni kube*   
 sudo apt-get autoremove  
 sudo rm -rf ~/.kube
 ```
-- uninstall Docker with
+- To uninstall Docker use the following commands
 ```
 sudo apt-get purge docker-ce docker-ce-cli containerd.io
 sudo rm -rf /var/lib/docker
 sudo rm -rf /var/lib/containerd
 ```
-- restart coredns pods with `kubectl rollout restart -n kube-system deployment/coredns`
-- use `kubectl logs -n kube-system pod/coredns-f9fd979d6-6wg6n` to get logs of coredns pod
-- was getting the following error for coredns pods after starting up kubeadm init
-	- see [here](https://coredns.io/plugins/loop/#troubleshooting)
-	- reccomends adding `resolvConf: /etc/resolv.conf` to `/etc/kubernetes/kubelet.conf`
+- `kubectl rollout restart -n kube-system deployment/coredns` to restart coredns pods
+- `kubectl logs -n kube-system pod/coredns-<pod-id>` to get the logs of a specific coredns pod
+- I was getting the following error for the coredns pods after starting up kubeadm init and looking through the logs
 ```
 [FATAL] plugin/loop: Loop (127.0.0.1:34536 -> :53) detected for zone ".", see coredns.io/plugins/loop#troubleshooting
 ```
-- run the following if `kubectl get nodes` is not working:
-	- see potential solutions [here](https://discuss.kubernetes.io/t/the-connection-to-the-server-host-6443-was-refused-did-you-specify-the-right-host-or-port/552/28)
+  - The [linked coredns docs](https://coredns.io/plugins/loop/#troubleshooting) recommends adding `resolvConf: /etc/resolv.conf` to `/etc/kubernetes/kubelet.conf` though the solution was removing `nameserver 127.0.0.1` from `/etc/resolv.conf` before running `kubeadm init`
+- Run the following if `kubectl get nodes` is not working:
 ```
 sudo -i
 swapoff -a
 exit
 strace -eopenat kubectl version
 ```
-- use `kubectl logs -n kube-system kube-flannel-ds-XXXXX` to get logs of flannel pod
-- ran into some issues with the master node flannel pod:
-	- resolved by running `sudo ip link delete flannel.1` on the host whose flannel pod was failing
-	- deleted the flannel pod with `kubectl delete pod -n kube-system kube-flannel-ds-XXXXX`
-- Label nodes with `kubectl label node <node-name> node-role.kubernetes.io/<role>=<role>`
-	- `<role>` should be the same if setting the role for a node currently with role set as `<none>`
-- remove label with `kubectl label node <node-name> node-role.kubernetes.io/<role>-`
+  -[This thread](https://discuss.kubernetes.io/t/the-connection-to-the-server-host-6443-was-refused-did-you-specify-the-right-host-or-port/552/28) discusses why `kubectl get nodes` may not be working and some potential solutions
+- `kubectl logs -n kube-system kube-flannel-ds-<pod-id>` to get logs of a specific Flannel pod
+- I also ran into some issues with the master node Flannel pod similar to what was posted in [this thread](https://github.com/coreos/flannel/issues/1060); this probles was resolved by running the following in order
+  - `sudo ip link delete flannel.1` on the master node (RPi jump box)
+  - `kubectl delete pod -n kube-system kube-flannel-ds-<pod-id>` to delete the Flannel pod
+  - Wait for K8s to automatically recreate the pod, then profit
+- `kubectl label node <node-name> node-role.kubernetes.io/<role>=<role>` to label nodes
+	- `<role>` should be the same if you're setting the role for a node currently with a role set as `<none>`
+- `kubectl label node <node-name> node-role.kubernetes.io/<role>-` to remove a label
 
 ## Extra Configurations
 ### Installing Calico CNI
@@ -276,7 +288,7 @@ strace -eopenat kubectl version
 - modify default IP pool CIDR to match pod network CIDR (10.244.0.0/16)
 	- `nano custom-resources`
 
-#### Side Notes:
+#### Side Notes
 - Calico could be used but it would require installation of an arm64 Raspian image (currently in beta)
 	- Calico only supports amd64 and arm64 (as of 12/10)
 
