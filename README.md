@@ -188,7 +188,10 @@ export VERSION=<version> && curl -sSL get.docker.com | sh
 sudo usermod pi -aG docker
 ```
   - Where `<version>` is replaced with a specific Docker Engine version 
-2) `sudo nano /boot/cmdline.txt` and add `cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory` to end of the line—do not make a new line and ensure that there's a space in front of `cgroup_enable=cpuset`
+2) `sudo nano /boot/cmdline.txt` and add the following to the end of the line—do not make a new line and ensure that there's a space in front of `cgroup_enable=cpuset`
+```bash
+cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory
+```
 3) `sudo reboot` to reboot the RPi for boot changes to take effect (do not skip this step)
 4) Install Kubernetes
 ##### Install the latest version of K8s
@@ -211,7 +214,7 @@ curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add
 ### Master Node Setup
 These steps should be performed only on one RPi (I used the RPi jump box).
 
-1) `sudo kubeadm config images pull -v3`
+1) `sudo kubeadm config images pull -v3` to pull down the images required for the K8s master node
 2) `sudo nano /etc/resolv.conf` and ensure that it does not have `nameserver 127.0.0.1` 
   - If `nameserver 127.0.0.1` exists, remove it and replace it with another DNS IP address that isn't the loopback address, then double check that `DNSMASQ_EXCEPT=lo` has been added in `/etc/default/dnsmasq` to prevent dnsmasq from overwriting/adding `nameserver 127.0.0.1` to `/etc/resolv.conf` upon reboot
   - This step is crucial to prevent coredns pods from crashing upon running `kubeadm init`
