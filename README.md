@@ -51,9 +51,9 @@ network={
   psk="<WiFi-password>"
 }
 ```
-4) Insert the micro SD card back into the Pi and power it on
-5) Connect to the RPi by running `ssh pi@raspberrypi.local`; you can also use `ping raspberrypi.local` to get the RPi's IP address then use `ssh pi@<ip-address>`
-6) Use `sudo raspi-config` to access the RPi configuration menu
+4) Insert the micro SD card back into the RPi and power it on
+5) `ssh pi@raspberrypi.local` to connect to the RPi; `ping raspberrypi.local` may also be used to get the RPi's IP address to run `ssh pi@<ip-address>`
+6) `sudo raspi-config` to access the RPi configuration menu for making the following changes
   - Change the password from its default `raspberry`
   - Change the hostname which can be used for easier ssh 
   - Expand the filesystem, under advanced options, allowing the full use of the SD card for the OS
@@ -61,9 +61,10 @@ network={
   - Change the locale
 7) Reboot the RPi with `sudo reboot`
 8) Set up [passwordless SSH access](https://www.raspberrypi.org/documentation/remote-access/ssh/passwordless.md)
-  - if you have previously generated RSA public/private keys execute `ssh-copy-id <USERNAME>@<IP-ADDRESS or HOSTNAME>`
-9) Update the package repository with `sudo apt-get update -y`
-10) Update all installed packages with `sudo apt-get upgrade -y`
+  - if you already have previously generated RSA public/private keys simply execute 
+```ssh-copy-id <USERNAME>@<IP-ADDRESS or HOSTNAME>```
+9) `sudo apt-get update -y` to update the package repository
+10) `sudo apt-get upgrade -y` to update all installed packages
 11) Disable swap with the following commands—it's recommended to run the commands individually to prevent some errors with `kubectl get` later on
 ```bash
 sudo dphys-swapfile swapoff
@@ -81,11 +82,9 @@ sudo dphys-swapfile swapoff && sudo dphys-swapfile uninstall && sudo update-rc.d
 ```
 
 ## Setting up the Jump Box and Cluster Network
-The following steps will setup the jump box RPi so that it acts as a DHCP server and DNS forwarder. It is assumed that at this point all RPi's have already been setup and are all connected to the switch.
+The following steps will setup the RPi jump box such that it acts as a DHCP server and DNS forwarder. It is assumed that at this point all RPi's have already been setup and are connected to the switch.
 
 1) Set up a [static IP address](https://www.raspberrypi.org/documentation/configuration/tcpip/) for both ethernet and WiFi interfaces by creating a [dhcpcd.conf](https://manpages.debian.org/testing/dhcpcd5/dhcpcd.conf.5.en.html) in `/etc/`
-  - A sample `dhcpcd.conf` is provided [here](./dhcpcd.conf)
-  - Note that the static IP address for `wlan0` should be within the DHCP pool range on the router
 ```
 # /etc/dhcpcd.conf
 interface eth0
@@ -98,12 +97,11 @@ static ip_address=<static-ip-address>
 static routers=<router-ip-address>
 static domain_name_servers=<dns-ip-address>
 ```
-3) Install [dnsmasq](https://www.linux.org/docs/man8/dnsmasq.html) with `sudo apt install dnsmasq` 
-4) Backup existing `dnsmasq.conf` with `sudo mv /etc/dnsmasq.conf /etc/dnsmasq.conf.backup`
+  - A sample `dhcpcd.conf` is provided [here](./dhcpcd.conf)
+  - Note that the static IP address for `wlan0` should be within the DHCP pool range on the router
+3) `sudo apt install dnsmasq` to install [dnsmasq](https://www.linux.org/docs/man8/dnsmasq.html) 
+4) `sudo mv /etc/dnsmasq.conf /etc/dnsmasq.conf.backup` to backup the existing `dnsmasq.conf`
 5) Create a new dnsmasq config file with `sudo nano /etc/dnsmasq.conf` and add the following
-  - Note that the `listen-address` is the same as the `static ip-address` for `eth0` declared in `dhcpcd.conf`
-  - If you have more than three worker nodes, declare more `dhcp-host` as needed with the correct MAC addresses
-  - `ifconfig eth0` can be used to find each RPi’s MAC address (look next to “ether”)
 ```bash
 # Provide a DHCP service over our eth0 adapter (ethernet port)
 interface=eth0
@@ -146,28 +144,30 @@ no-resolv
 # log-queries
 # log-dhcp
 ```
-6) Edit `/etc/default/dnsmasq` and add `DNSMASQ_EXCEPT=lo` at the end of the file
+  - Note that the `listen-address` is the same as the `static ip-address` for `eth0` declared in `dhcpcd.conf`
+  - If you have more or less than three worker nodes, declare or delete `dhcp-host` as needed ensuring that the correct MAC addresses are used
+  - `ifconfig eth0` can be used to find each RPi’s MAC address (look next to “ether”)
+6) `sudo nano /etc/default/dnsmasq` and add `DNSMASQ_EXCEPT=lo` at the end of the file
   - This is needed to [prevent dnsmasq from overwriting](https://raspberrypi.stackexchange.com/questions/37439/proper-way-to-prevent-dnsmasq-from-overwriting-dns-server-list-supplied-by-dhcp) `/etc/resolv.conf` on reboot which can crash the coredns pods when later initializing kubeadm
-7) To prevent errors with booting up dnsmasq, use `sudo nano /etc/init.d/dnsmasq` and add `sleep 10` to the top of the file
-8) Reboot the RPi for dnsmasq changes to take effect: `sudo reboot`
-9) ssh back into the RPi jump box and double check that dnsmasq is running with `sudo service dnsmasq status`
-10) Edit `/etc/sysctl.conf` and uncomment `net.ipv4.ip_forward=1` to enable IPv4 forwarding
+7) `sudo nano /etc/init.d/dnsmasq` and add `sleep 10` to the top of the file to prevent errors with booting up dnsmasq
+8) `sudo reboot` to reboot the RPi for dnsmasq changes to take effect
+9) ssh back into the RPi jump box and ensure that dnsmasq is running with `sudo service dnsmasq status`
+10) `sudo nano /etc/sysctl.conf` and uncomment `net.ipv4.ip_forward=1` to enable IPv4 forwarding
 11) Add the following `iptables` rules to enable port forwarding
 ```bash
 sudo iptables -t nat -A POSTROUTING -o wlan0 -j MASQUERADE
 sudo iptables -A FORWARD -i wlan0 -o eth0 -m state --state RELATED,ESTABLISHED -j ACCEPT
 sudo iptables -A FORWARD -i eth0 -o wlan0 -j ACCEPT
 ```
-12) Install `sudo apt install iptables-persistent` which will be used to persist our newly added `iptables` rules across reboots
-13) Use `sudo dpkg-reconfigure iptables-persistent` persist our rules
+12) `sudo apt install iptables-persistent` to install iptable-persistent for persisting our newly added `iptables` rules
+13) `sudo dpkg-reconfigure iptables-persistent` to re-save and persist our rules across reboots
 
 #### Side Notes:
 - If something goes wrong, I highly recommend checking out [Tim Downey's RPi router guide](https://downey.io/blog/create-raspberry-pi-3-router-dhcp-server/) as additional information is provided
-- Check `iptables` rules with `sudo iptables -L -n -v`
-- To check the current leases provided by dnsmasq use `cat /var/lib/misc/dnsmasq.leases`
-- Check dnsmasq's status with `sudo service dnsmasq status`
-- Restart dnsmasq with `sudo /etc/init.d/dnsmasq restart`
-- Stop dnsmasq with `sudo service dnsmasq stop` (will restart on boot)
+- `sudo iptables -L -n -v` to check the current `iptables` rules
+- `cat /var/lib/misc/dnsmasq.leases` to check the current leases provided by dnsmasq
+- `sudo service dnsmasq restart` to restart dnsmasq
+- `sudo service dnsmasq stop` to stop dnsmasq (will restart on boot)
 
 ## Installing Docker and Kubernetes w/Flannel CNI
 ### Worker Node Setup
