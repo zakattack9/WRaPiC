@@ -11,7 +11,7 @@ Wrapic is a wireless Raspberry Pi cluster running various containerized applicat
 - [Extra Configurations](https://github.com/zakattack9/WRaPiC#extra-configurations)
   - [Configure iTerm2 Window Arrangement and Profile](https://github.com/zakattack9/WRaPiC#configure-iterm-window-arrangement-and-profiles)
   - [Installing Calico CNI](https://github.com/zakattack9/WRaPiC#installing-calico-cni)
-  - [Install zsh w/Oh-my-zsh and Configure Plugins](https://github.com/zakattack9/WRaPiC#install-zsh-wohmyzsh-and-configure-plugins)
+  - [Install zsh w/Oh-my-zsh and Configure Plugins](https://github.com/zakattack9/WRaPiC#install-zsh-woh-my-zsh-and-configure-plugins)
 - [References](https://github.com/zakattack9/WRaPiC#references)
 
 As a disclaimer, most of these steps have been adapted from multiple articles, guides, and documentations found online. Much credit goes to Alex Ellis' [Kubernetes on Raspian](https://github.com/teamserverless/k8s-on-raspbian) repository and Tim Downey's [Baking a Pi Router](https://downey.io/blog/create-raspberry-pi-3-router-dhcp-server/) guide.
@@ -234,6 +234,8 @@ kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documen
 kubeadm join 192.168.29.229:6443 --token 2t9e17.m8jbybvnnheqwwjp \
     --discovery-token-ca-cert-hash sha256:4ca2fa33d228075da93f5cb3d8337931b32c8de280a664726fe6fc73fba89563
 ```
+8) `kubectl get nodes` to check that all nodes were joined successfully
+9) At this point, all RPi's should be setup and ready to run anything on top of K8s
 
 #### Side Notes
 - To uninstall K8s use the following commands
@@ -297,9 +299,9 @@ strace -eopenat kubectl version
 - `ssh -t pi@routerPi.local 'ssh pi@workerNode3Pi.local'`
 
 ### Install zsh w/Oh-my-zsh and Configure Plugins
-1) `sudo apt-get install zsh`
+1) `sudo apt-get install zsh` to install zsh
 2) `chsh -s $(which zsh)` to install default shell to zsh
-3) `sudo apt-get install git wget` to install `git` and `wget` packages
+3) `sudo apt-get install git wget` to install git and wget packages
 4) Install Oh-my-zsh framework
 ```bash
 wget https://github.com/robbyrussell/oh-my-zsh/raw/master/tools/install.sh -O - | zsh
