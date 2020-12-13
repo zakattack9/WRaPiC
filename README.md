@@ -39,32 +39,33 @@ In headless setup, only WiFi and ssh are used to configure the RPi's without the
   - As an alternative, the [Raspberry Pi OS (64-bit) beta](https://www.raspberrypi.org/forums/viewtopic.php?p=1668160) may be installed instead if you plan to use arm64 Docker images or would like to use Calico as your K8s CNI; it is important to note that the 64-bit beta includes the full Raspberry Pi OS which includes the desktop GUI and therefore may contain unneeded packages/bulk.
   - Another great option if an arm64 architecture is desired, is to install the officially supported 64-bit Ubuntu Server OS using the Raspberry Pi Imager.
 2) Create an empty `ssh` file (no extension) in the root directory of the micro sd card 
-3) Create a `wpa_supplicant.conf` also in the root directory to [set up a WiFi connection](https://www.raspberrypi.org/documentation/configuration/wireless/headless.md)
+3) Create a `wpa_supplicant.conf` in the `boot` folder to [set up a WiFi connection](https://www.raspberrypi.org/documentation/configuration/wireless/headless.md)
 ```
+# /boot/wpa_supplicant.conf
 ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
 update_config=1
 country=US
 
 network={
-  ssid="<insert WiFi SSID>"
-  psk="<insert WiFi password>"
+  ssid="<WiFi-SSID>"
+  psk="<WiFi-password>"
 }
 ```
 4) Insert the micro SD card back into the Pi and power it on
 5) Connect to the RPi by running `ssh pi@raspberrypi.local`; you can also use `ping raspberrypi.local` to get the RPi's IP address then use `ssh pi@<ip-address>`
-6) Use `sudo raspi-config` to access the RPi configuration menu:
-	- Change the password from its default `raspberry`
-	- Change the hostname which can be used for easier ssh 
-	- Expand the filesystem, under advanced options, allowing the full use of the SD card for the OS
-	- Update the operating system to the latest version
-	- Change the locale
+6) Use `sudo raspi-config` to access the RPi configuration menu
+  - Change the password from its default `raspberry`
+  - Change the hostname which can be used for easier ssh 
+  - Expand the filesystem, under advanced options, allowing the full use of the SD card for the OS
+  - Update the operating system to the latest version
+  - Change the locale
 7) Reboot the RPi with `sudo reboot`
-8) Set up [passwordless SSH access](https://www.raspberrypi.org/documentation/remote-access/ssh/passwordless.md):
-	- if you have previously generated RSA public/private keys execute `ssh-copy-id <USERNAME>@<IP-ADDRESS or HOSTNAME>`
+8) Set up [passwordless SSH access](https://www.raspberrypi.org/documentation/remote-access/ssh/passwordless.md)
+  - if you have previously generated RSA public/private keys execute `ssh-copy-id <USERNAME>@<IP-ADDRESS or HOSTNAME>`
 9) Update the package repository with `sudo apt-get update -y`
 10) Update all installed packages with `sudo apt-get upgrade -y`
 11) Disable swap with the following commands—it's recommended to run the commands individually to prevent some errors with `kubectl get` later on
-```
+```bash
 sudo dphys-swapfile swapoff
 sudo dphys-swapfile uninstall
 sudo systemctl disable dphys-swapfile
@@ -74,18 +75,21 @@ sudo systemctl disable dphys-swapfile
 - May need to comment out `SendEnv LANG LC_*` in `/etc/ssh/ssh_config` on host SSH client to fix RPi locale problems
 - Check if swap is disabled with `free -h` (look for “Swap:”); may also use `sudo swapon —summary` which should return nothing
 - If swap is still not disabled after reboot, try editing `/etc/dphys-swapfile` and set `CONF_SWAPSIZE=0`
-- While mentioned frequently, this disable swap command did not seem to work on RPi Buster (the one above should be used)
+- Although mentioned frequently, the disable swap command below did not seem to work on RPi Buster OS to fully disable swap (the commands mentioned in step 11 should be used instead)
 ```
 sudo dphys-swapfile swapoff && sudo dphys-swapfile uninstall && sudo update-rc.d dphys-swapfile remove
 ```
 
 ## Setting up the Jump Box and Cluster Network
+The following steps will setup the jump box RPi so that it acts as a DHCP server and DNS forwarder. It is assumed that at this point all RPi's have already been setup and are all connected to the switch.
+
 1) Set up a [static IP address](https://www.raspberrypi.org/documentation/configuration/tcpip/) for both ethernet and WiFi interfaces by creating a [dhcpcd.conf](https://manpages.debian.org/testing/dhcpcd5/dhcpcd.conf.5.en.html) in `/etc/`
   - A sample `dhcpcd.conf` is provided [here](./dhcpcd.conf)
   - Note that the static IP address for `wlan0` should be within the DHCP pool range on the router
 ```
+# /etc/dhcpcd.conf
 interface eth0
-static ip_address=<static-ip-address>
+static ip_address=10.0.0.1
 static domain_name_servers=<dns-ip-address>
 nolink
 
@@ -97,6 +101,9 @@ static domain_name_servers=<dns-ip-address>
 3) Install [dnsmasq](https://www.linux.org/docs/man8/dnsmasq.html) with `sudo apt install dnsmasq` 
 4) Backup existing `dnsmasq.conf` with `sudo mv /etc/dnsmasq.conf /etc/dnsmasq.conf.backup`
 5) Create a new dnsmasq config file with `sudo nano /etc/dnsmasq.conf` and add the following
+  - Note that the `listen-address` is the same as the `static ip-address` for `eth0` declared in `dhcpcd.conf`
+  - If you have more than three worker nodes, declare more `dhcp-host` as needed with the correct MAC addresses
+  - `ifconfig eth0` can be used to find each RPi’s MAC address (look next to “ether”)
 ```bash
 # Provide a DHCP service over our eth0 adapter (ethernet port)
 interface=eth0
@@ -109,8 +116,8 @@ listen-address=10.0.0.1
 dhcp-range=10.0.0.32,10.0.0.128,12h
 
 # Assign static IPs to the kube cluster members (RPi K8s worker nodes 1 to 3)
-# This would make it easier for tunneling, certs, etc.
-# RPi MAC address: b8:27:eb:00:00:0X
+# This will make it easier for tunneling, certs, etc.
+# Replace b8:27:eb:00:00:0X with the Raspberry Pi's actual MAC address
 dhcp-host=b8:27:eb:00:00:01,10.0.0.50
 dhcp-host=b8:27:eb:00:00:02,10.0.0.51
 dhcp-host=b8:27:eb:00:00:03,10.0.0.52
@@ -140,20 +147,27 @@ no-resolv
 # log-dhcp
 ```
 6) Edit `/etc/default/dnsmasq` and add `DNSMASQ_EXCEPT=lo` at the end of the file
-	- This is needed to [prevent dnsmasq from overwriting](https://raspberrypi.stackexchange.com/questions/37439/proper-way-to-prevent-dnsmasq-from-overwriting-dns-server-list-supplied-by-dhcp) `/etc/resolv.conf` on reboot which can crash the coredns pods when later initializing kubeadm
+  - This is needed to [prevent dnsmasq from overwriting](https://raspberrypi.stackexchange.com/questions/37439/proper-way-to-prevent-dnsmasq-from-overwriting-dns-server-list-supplied-by-dhcp) `/etc/resolv.conf` on reboot which can crash the coredns pods when later initializing kubeadm
 7) To prevent errors with booting up dnsmasq, use `sudo nano /etc/init.d/dnsmasq` and add `sleep 10` to the top of the file
-- use `sudo dpkg-reconfigure iptables-persistent` to re-save iptables and persist them 
+8) Reboot the RPi for dnsmasq changes to take effect: `sudo reboot`
+9) ssh back into the RPi jump box and double check that dnsmasq is running with `sudo service dnsmasq status`
+10) Edit `/etc/sysctl.conf` and uncomment `net.ipv4.ip_forward=1` to enable IPv4 forwarding
+11) Add the following `iptables` rules to enable port forwarding
+```bash
+sudo iptables -t nat -A POSTROUTING -o wlan0 -j MASQUERADE
+sudo iptables -A FORWARD -i wlan0 -o eth0 -m state --state RELATED,ESTABLISHED -j ACCEPT
+sudo iptables -A FORWARD -i eth0 -o wlan0 -j ACCEPT
+```
+12) Install `sudo apt install iptables-persistent` which will be used to persist our newly added `iptables` rules across reboots
+13) Use `sudo dpkg-reconfigure iptables-persistent` persist our rules
 
 #### Side Notes:
-- can disable dnsmasq by editing `/etc/default/dnsmasq` and changing `ENABLED=1` to `ENABLED=0` (doesn’t work)
-- check iptables rules with `sudo iptables -L -n -v`
-- check dnsmasq status with `sudo service dnsmasq status`
-- restart dnsmasq with `sudo /etc/init.d/dnsmasq restart`
-- stop dnsmasq with `sudo service dnsmasq stop` (will restart on boot)
-- `ifconfig eth0` can be used to find each RPi’s MAC address (look next to “ether”)
-- label nodes with `kubectl label node <node-name> node-role.kubernetes.io/<role>=<role>`
-	- `<role>` should be the same if setting the role for a node currently with role set as `<none>`
-- remove label with `kubectl label node <node-name> node-role.kubernetes.io/<role>-`
+- If something goes wrong, I highly recommend checking out [Tim Downey's RPi router guide](https://downey.io/blog/create-raspberry-pi-3-router-dhcp-server/) as additional information is provided
+- Check `iptables` rules with `sudo iptables -L -n -v`
+- To check the current leases provided by dnsmasq use `cat /var/lib/misc/dnsmasq.leases`
+- Check dnsmasq's status with `sudo service dnsmasq status`
+- Restart dnsmasq with `sudo /etc/init.d/dnsmasq restart`
+- Stop dnsmasq with `sudo service dnsmasq stop` (will restart on boot)
 
 ## Installing Docker and Kubernetes w/Flannel CNI
 ### Worker Node Setup
@@ -243,6 +257,9 @@ strace -eopenat kubectl version
 - ran into some issues with the master node flannel pod:
 	- resolved by running `sudo ip link delete flannel.1` on the host whose flannel pod was failing
 	- deleted the flannel pod with `kubectl delete pod -n kube-system kube-flannel-ds-XXXXX`
+- Label nodes with `kubectl label node <node-name> node-role.kubernetes.io/<role>=<role>`
+	- `<role>` should be the same if setting the role for a node currently with role set as `<none>`
+- remove label with `kubectl label node <node-name> node-role.kubernetes.io/<role>-`
 
 ## Extra Configurations
 ### Installing Calico CNI
