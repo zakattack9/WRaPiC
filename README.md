@@ -274,6 +274,8 @@ strace -eopenat kubectl version
 - `kubectl label node <node-name> node-role.kubernetes.io/<role>-` to remove a label
 
 ## Extra Configurations
+This section includes instructions for various installations and configurations that are optional, but may be useful for your cluster needs.
+
 ### Installing Calico CNI
 - did not work (see side notes)
 - get calico yaml `curl https://docs.projectcalico.org/manifests/calico.yaml -O`
@@ -299,22 +301,22 @@ strace -eopenat kubectl version
 - `ssh -t pi@routerPi.local 'ssh pi@workerNode3Pi.local'`
 
 ### Install zsh w/Oh-my-zsh and Configure Plugins
-1) `sudo apt-get install zsh` to install zsh
+1) `sudo apt-get install zsh` to install [zsh](http://zsh.sourceforge.net/)
 2) `chsh -s $(which zsh)` to install default shell to zsh
 3) `sudo apt-get install git wget` to install git and wget packages
-4) Install Oh-my-zsh framework
+4) Install [Oh-my-zsh](https://github.com/ohmyzsh/ohmyzsh) framework
 ```bash
 wget https://github.com/robbyrussell/oh-my-zsh/raw/master/tools/install.sh -O - | zsh
 cp ~/.oh-my-zsh/templates/zshrc.zsh-template ~/.zshrc
 source .zshrc
 ```
-5) Install zsh syntax highlighting plugin
+5) Install [zsh syntax highlighting](https://github.com/zsh-users/zsh-syntax-highlighting) plugin
 ```bash
 git clone https://github.com/zsh-users/zsh-syntax-highlighting.git
 mv zsh-syntax-highlighting ~/.oh-my-zsh/plugins
 echo "source ~/.oh-my-zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" >> ~/.zshrc
 ```
-6) Install zsh auto-suggestions plugin
+6) Install [zsh auto-suggestions](https://github.com/zsh-users/zsh-autosuggestions) plugin
 ```bash
 git clone https://github.com/zsh-users/zsh-autosuggestions
 mv zsh-autosuggestions ~/.oh-my-zsh/custom/plugins
@@ -324,6 +326,15 @@ mv zsh-autosuggestions ~/.oh-my-zsh/custom/plugins
 plugins=(git docker docker zsh-autosuggestions)
 ```
 8) `source .zshrc` to refresh shell
+9) Install [powerlevel10k](https://github.com/romkatv/powerlevel10k) theme
+```bash
+git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
+```
+10) `sudo nano ~/.zshrc` and set theme to powerlevel10k
+```bash
+ZSH_THEME="powerlevel10k/powerlevel10k"
+```
+11) `source .zshrc` and go through p10k setup process
 
 ## References
 - [Disabling swap](https://www.raspberrypi.org/forums/viewtopic.php?p=1488821)
@@ -333,6 +344,7 @@ plugins=(git docker docker zsh-autosuggestions)
 - [Install zsh on Linux](https://linoxide.com/tools/install-zsh-on-linux/)
 
 ## TODO
+- and Weave Net instructions to docs
 - setup ansible playbooks:
 	- RPi router configuration
 	- RPi disable swap and SSH key setup
