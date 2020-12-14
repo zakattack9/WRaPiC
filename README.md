@@ -2,7 +2,7 @@
 Wrapic is a wireless Raspberry Pi cluster running various containerized applications on top of full Kubernetes. In my setup, a single 5-port PoE switch provides power to four RPi's all of which are equipped with PoE hats. One Raspberry Pi acts as a jump box connecting to an external network through WiFi and forwarding traffic through its ethernet port; this provides the other 3 RPi's with an internet connection and separates the cluster onto its own private network. The jump box also acts as the Kubernetes master node and all other RPi's are considered worker nodes in the cluster.
 
 ### Contents
-Most sections include a *Side Notes* subsection that includes extra information for that section ranging from helpful commands to potential issues/solutions I came across of during my setup.
+Most sections include a *Side Notes* subsection that includes extra information for that specific section ranging from helpful commands to potential issues/solutions I came across of during my setup.
 - [Parts List](https://github.com/zakattack9/WRaPiC#parts-list)
 - [Initial Headless Raspberry Pi Setup](https://github.com/zakattack9/WRaPiC#initial-headless-raspberry-pi-setup)
   - [Side Notes](https://github.com/zakattack9/WRaPiC#side-notes)
@@ -13,11 +13,12 @@ Most sections include a *Side Notes* subsection that includes extra information 
   - [Master Node Setup](https://github.com/zakattack9/WRaPiC#master-node-setup)
   - [Side Notes](https://github.com/zakattack9/WRaPiC#side-notes-2)
 - [Extra Configurations](https://github.com/zakattack9/WRaPiC#extra-configurations)
-  - [Installing Calico CNI](https://github.com/zakattack9/WRaPiC#installing-calico-cni)
-    - [Side Notes](https://github.com/zakattack9/WRaPiC#side-notes-3)
-  - [Configure iTerm2 Window Arrangement and Profile](https://github.com/zakattack9/WRaPiC#configure-iterm-window-arrangement-and-profiles)
   - [Install zsh w/Oh-my-zsh and Configure Plugins](https://github.com/zakattack9/WRaPiC#install-zsh-woh-my-zsh-and-configure-plugins)
+    - [Side Notes](https://github.com/zakattack9/WRaPiC#side-notes-3)
+  - [Kubernetes Dashboard Setup](https://github.com/zakattack9/WRaPiC#kubernetes-dashboard-setup)
+  - [Installing Calico CNI](https://github.com/zakattack9/WRaPiC#installing-calico-cni)
     - [Side Notes](https://github.com/zakattack9/WRaPiC#side-notes-4)
+  - [Configure iTerm2 Window Arrangement and Profile](https://github.com/zakattack9/WRaPiC#configure-iterm-window-arrangement-and-profiles)
 - [References](https://github.com/zakattack9/WRaPiC#references)
 
 As a disclaimer, most of these steps have been adapted from multiple articles, guides, and documentations found online which have been compiled into this README for easy access and a more straightforward cluster setup. Much credit goes to Alex Ellis' [Kubernetes on Raspian](https://github.com/teamserverless/k8s-on-raspbian) repository and Tim Downey's [Baking a Pi Router](https://downey.io/blog/create-raspberry-pi-3-router-dhcp-server/) guide.
@@ -42,9 +43,9 @@ My cluster only includes 4 RPi 4B's though there is no limit to the amount of RP
 ## Initial Headless Raspberry Pi Setup
 In headless setup, only WiFi and ssh are used to configure the RPi's without the need for an external monitor and keyboard. This will likely be the most tedious and time consuming part of the set up. These steps should be repeated individually for each RPi with only one RPi being connected to the network at a given time; this makes it easier to find and distinguish the RPi's in step 5.
 
-1) Install Raspberry Pi OS Lite (32-bit) with [Raspberry Pi Imager](https://www.raspberrypi.org/software/)
-  - As an alternative, the [Raspberry Pi OS (64-bit) beta](https://www.raspberrypi.org/forums/viewtopic.php?p=1668160) may be installed instead if you plan to use arm64 Docker images or would like to use Calico as your K8s CNI; it is important to note that the 64-bit beta is the full Raspberry Pi OS which includes the desktop GUI and therefore may contain unneeded packages/bulk.
-  - Another great option if an arm64 architecture is desired, is to install the officially supported 64-bit Ubuntu Server OS using the Raspberry Pi Imager.
+1) Install **Raspberry Pi OS Lite (32-bit)** with [Raspberry Pi Imager](https://www.raspberrypi.org/software/)
+  - As an alternative, the [Raspberry Pi OS (64-bit) beta](https://www.raspberrypi.org/forums/viewtopic.php?p=1668160) may be installed instead if you plan to use arm64 Docker images or would like to use Calico as your K8s CNI; it is important to note that the 64-bit beta is the full Raspberry Pi OS which includes the desktop GUI and therefore may contain unneeded packages/bulk
+  - Another great option if an arm64 architecture is desired, is to install the officially supported 64-bit Ubuntu Server OS using the Raspberry Pi Imager
 2) Create an empty `ssh` file (no extension) in the root directory of the micro sd card 
 3) Create a `wpa_supplicant.conf` in the `boot` folder to [set up a WiFi connection](https://www.raspberrypi.org/documentation/configuration/wireless/headless.md)
 ```
@@ -60,7 +61,7 @@ network={
 ```
 4) Insert the micro SD card back into the RPi and power it on
 5) `ssh pi@raspberrypi.local` to connect to the RPi; `ping raspberrypi.local` may also be used to get the RPi's IP address to run `ssh pi@<ip-address>`
-6) `sudo raspi-config` to access the RPi configuration menu for making the following changes
+6) `sudo raspi-config` to access the RPi configuration menu for making the following recommended changes
   - Change the password from its default `raspberry`
   - Change the hostname which can be used for easier ssh 
   - Expand the filesystem, under advanced options, allowing the full use of the SD card for the OS
@@ -90,7 +91,7 @@ sudo dphys-swapfile swapoff && sudo dphys-swapfile uninstall && sudo update-rc.d
 ```
 
 ## Setting up the Jump Box and Cluster Network
-The following steps will setup the RPi jump box such that it acts as a DHCP server and DNS forwarder. It is assumed that at this point all RPi's have already been setup and are connected to the switch.
+The following steps will set up the RPi jump box such that it acts as a DHCP server and DNS forwarder. It is assumed that at this point all RPi's have already been configured and are connected to the switch.
 
 1) Set up a [static IP address](https://www.raspberrypi.org/documentation/configuration/tcpip/) for both ethernet and WiFi interfaces by creating a [dhcpcd.conf](https://manpages.debian.org/testing/dhcpcd5/dhcpcd.conf.5.en.html) in `/etc/`
 ```
@@ -245,7 +246,7 @@ kubeadm join 192.168.29.229:6443 --token 2t9e17.m8jbybvnnheqwwjp \
     --discovery-token-ca-cert-hash sha256:4ca2fa33d228075da93f5cb3d8337931b32c8de280a664726fe6fc73fba89563
 ```
 8) `kubectl get nodes` to check that all nodes were joined successfully
-9) At this point, all RPi's should be setup and ready to run anything on top of K8s
+9) At this point, all RPi's should be set up and ready to run anything on top of K8s
 
 #### Side Notes
 - To uninstall K8s use the following commands
@@ -285,30 +286,6 @@ strace -eopenat kubectl version
 
 ## Extra Configurations
 This section includes instructions for various installations and configurations that are optional, but may be useful for your cluster needs.
-
-### Installing Calico CNI
-- did not work (see side notes)
-- get calico yaml `curl https://docs.projectcalico.org/manifests/calico.yaml -O`
-- open `calico.yaml` in nano and search for `192.168.0.0/16` 
-	- uncomment and replace with:
-```
-- name: CALICO_IPV4POOL_CIDR
-  value: "10.244.0.0/16"
-```
-- `kubectl create -f https://docs.projectcalico.org/manifests/tigera-operator.yaml`
-- `curl https://docs.projectcalico.org/manifests/custom-resources.yaml -O`
-- modify default IP pool CIDR to match pod network CIDR (10.244.0.0/16)
-	- `nano custom-resources`
-
-#### Side Notes
-- Calico could be used but it would require installation of an arm64 Raspian image (currently in beta)
-	- Calico only supports amd64 and arm64 (as of 12/10)
-
-### Configure iTerm Window Arrangement and Profiles
-- `ssh pi@routerPi.local`
-- `ssh -t pi@routerPi.local 'ssh pi@workerNode1.local'`
-- `ssh -t pi@routerPi.local 'ssh pi@workerNode2Pi.local'`
-- `ssh -t pi@routerPi.local 'ssh pi@workerNode3Pi.local'`
 
 ### Install zsh w/Oh-my-zsh and Configure Plugins
 1) `sudo apt-get install zsh` to install [Z shell (zsh)](http://zsh.sourceforge.net/)
@@ -386,16 +363,65 @@ chsh -s $(which zsh)
 # close the shell and ssh back into the RPi
 ```
 
+### Kubernetes Dashboard Setup
+This is a quick way to set up, run, and access the Kubernetes Dashboard remotely from another host outside the cluster network such as the computer used to ssh into the RPi cluster. These steps have been taken from the official [Kubernetes Dashabord documentation](https://kubernetes.io/docs/tasks/access-application-cluster/web-ui-dashboard/) and Oracle's [Access the Kubernetes Dashboard](https://docs.oracle.com/en/operating-systems/olcne/orchestration/dashboard.html#dashboard-start) guide.
+
+1) Deploy the K8s dashboard from the master node with the following command
+```bash
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0/aio/deploy/recommended.yaml
+```
+2) `kubectl proxy` to start the proxy forwarding traffic to the internal pod where the dashboard is running
+3) Use the command below to get the Bearer token needed to log into the dashboard; alternatively, a sample user with a coresspoding Bearer token can be created by following [this guide](https://github.com/kubernetes/dashboard/blob/master/docs/user/access-control/creating-sample-user.md)
+```bash
+kubectl -n kube-system describe $(kubectl -n kube-system \
+get secret -n kube-system -o name | grep namespace) | grep token:
+``` 
+4) Run the following command from the remote device where the dashboard will be accessed; replace `<username>` with username of the master node (the default is `pi`) and `ip-address` with the ip address of the master node's ip (may use `ifconfig`)
+```bash
+ssh -L 8001:127.0.0.1:8001 <username>@<ip-address>
+```
+5) Navigate to the following address on the remote device to access the dashboard UI
+```
+http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/ 
+```
+6) Select the "Token" login option, paste the value of the token received in step 3, and click "Sign in"
+
+### Installing Calico CNI
+- did not work (see side notes)
+- get calico yaml `curl https://docs.projectcalico.org/manifests/calico.yaml -O`
+- open `calico.yaml` in nano and search for `192.168.0.0/16` 
+	- uncomment and replace with:
+```
+- name: CALICO_IPV4POOL_CIDR
+  value: "10.244.0.0/16"
+```
+- `kubectl create -f https://docs.projectcalico.org/manifests/tigera-operator.yaml`
+- `curl https://docs.projectcalico.org/manifests/custom-resources.yaml -O`
+- modify default IP pool CIDR to match pod network CIDR (10.244.0.0/16)
+	- `nano custom-resources`
+
+#### Side Notes
+- Calico could be used but it would require installation of an arm64 Raspian image (currently in beta)
+	- Calico only supports amd64 and arm64 (as of 12/10)
+
+### Configure iTerm Window Arrangement and Profiles
+- `ssh pi@routerPi.local`
+- `ssh -t pi@routerPi.local 'ssh pi@workerNode1.local'`
+- `ssh -t pi@routerPi.local 'ssh pi@workerNode2Pi.local'`
+- `ssh -t pi@routerPi.local 'ssh pi@workerNode3Pi.local'`
+
 ## References
 - [Disabling swap](https://www.raspberrypi.org/forums/viewtopic.php?p=1488821)
 - [Alex Ellis' K8s on Raspian repo](https://github.com/teamserverless/k8s-on-raspbian)
 - [Tim Downey's RPi Router guide](https://downey.io/blog/create-raspberry-pi-3-router-dhcp-server/)
 - [Richard Youngkin's K8s cluster guide](https://medium.com/better-programming/how-to-set-up-a-raspberry-pi-cluster-ff484a1c6be9)
-- [Install zsh on Linux](https://linoxide.com/tools/install-zsh-on-linux/)
+- [Install zsh on Linux](https://linoxide.com/tools/install-zsh-on-linux/)\
+- [Remote Kubernetes Dashboard](https://docs.oracle.com/en/operating-systems/olcne/orchestration/dashboard.html#dashboard-remote)
 
 ## TODO
-- and Weave Net instructions to docs
-- setup ansible playbooks:
+- add Weave Net instructions to docs
+- add iTerm2 profile config instructions
+- set up ansible playbooks:
 	- RPi router configuration
 	- RPi disable swap and SSH key setup
 	- RPi kubernetes setup
