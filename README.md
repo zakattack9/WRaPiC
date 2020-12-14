@@ -339,6 +339,32 @@ ZSH_THEME="powerlevel10k/powerlevel10k"
 ```
 11) `source .zshrc` and go through the p10k setup process
 
+#### Side Notes
+- If some commands can no longer be found while using zsh, it likely means your `$PATH` variable got screwed up; to fix this do the following
+```bash
+chsh -s $(which bash)
+
+# after typing in your password, close the terminal and log back into the RPi
+# once logged back into the RPi, your terminal should be back to using bash as the default shell
+
+echo $PATH
+# copy the output of the above echo command
+
+nano ~/.zshrc
+# uncomment and replace...
+export PATH=$HOME/bin:/usr/local/bin:$PATH
+# with...
+export PATH=<output-from-echo-$PATH>
+# exit nano
+
+chsh -s $(which zsh)
+# exit and log back into the terminal
+```
+- If any `kubectl` commands are throwing a similar error to the one shown below, it's likely that K8s is no longer running on your RPi's; you can double check this by doing `docker ps` and seeing if there are any K8s related containers running, if not, you will likely need to rerun the `kubeadm init` command and follow the steps in *[Master Node Setup](https://github.com/zakattack9/WRaPiC#master-node-setup)*
+```
+The connection to the server 192.168.29.229:6443 was refused - did you specify the right host or port?
+```
+
 ## References
 - [Disabling swap](https://www.raspberrypi.org/forums/viewtopic.php?p=1488821)
 - [Alex Ellis' K8s on Raspian repo](https://github.com/teamserverless/k8s-on-raspbian)
