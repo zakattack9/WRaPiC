@@ -1,5 +1,5 @@
 # Wrapic Documentation
-Wrapic is a Wireless Raspberry Pi Cluster that can run various containerized applications on top of full Kubernetes. What makes this cluster "wireless" is that it doesn't need to be physically connected to a router via ethernet, instead it bridges off WiFi to receive internet—this is great for situations where the router is inaccessible.
+Wrapic is a Wireless Raspberry Pi Cluster that can run various containerized applications on top of full Kubernetes. What makes the cluster "wireless" is that it doesn't need to be physically connected to a router via ethernet, instead it bridges off WiFi to receive internet—this is great for situations where the router is inaccessible.
 
 In my setup, a single 5-port PoE switch provides power to four RPi's all of which are equipped with PoE hats. One Raspberry Pi acts as a jump box connecting to an external network through WiFi and forwarding traffic through its ethernet port; this provides the other 3 RPi's with an internet connection and separates the cluster onto its own private network. The jump box also acts as the Kubernetes master node and all other RPi's are considered worker nodes in the cluster.
 
@@ -313,7 +313,7 @@ mv zsh-autosuggestions ~/.oh-my-zsh/custom/plugins
 ```
 7) `sudo nano ~/.zshrc` and modify the plugin list to include the following
 ```bash
-plugins=(git docker docker zsh-autosuggestions)
+plugins=(git docker kubectl zsh-autosuggestions)
 ```
 8) `source .zshrc` to refresh shell
 9) Install [Powerlevel10k](https://github.com/romkatv/powerlevel10k) theme
@@ -364,6 +364,7 @@ export PATH=<output-from-echo-$PATH>
 chsh -s $(which zsh)
 # close the shell and ssh back into the RPi
 ```
+- The `docker` and `kubectl` Oh-my-zsh plugins adds tab completion when using the either command; as a bonus, the kubectl plugin also adds [aliases](https://github.com/ohmyzsh/ohmyzsh/tree/master/plugins/kubectl#aliases) for common kubectl commands such as `k` for `kubectl`
 
 ### Kubernetes Dashboard Setup
 This is a quick way to set up, run, and access the Kubernetes Dashboard remotely from another host outside the cluster network such as the computer used to ssh into the RPi cluster. These steps have been adapted from the official [Kubernetes Dashabord documentation](https://kubernetes.io/docs/tasks/access-application-cluster/web-ui-dashboard/) and Oracle's [Access the Kubernetes Dashboard](https://docs.oracle.com/en/operating-systems/olcne/orchestration/dashboard.html#dashboard-start) guide.
