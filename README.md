@@ -2,19 +2,25 @@
 Wrapic is a wireless Raspberry Pi cluster running various containerized applications on top of full Kubernetes. In my setup, a single 5-port PoE switch provides power to four RPi's all of which are equipped with PoE hats. One Raspberry Pi acts as a jump box connecting to an external network through WiFi and forwarding traffic through its ethernet port; this provides the other 3 RPi's with an internet connection and separates the cluster onto its own private network. The jump box also acts as the Kubernetes master node and all other RPi's are considered worker nodes in the cluster.
 
 ### Contents
+Most sections include a *Side Notes* subsection that includes extra information for that section ranging from helpful commands to potential issues/solutions I came across of during my setup.
 - [Parts List](https://github.com/zakattack9/WRaPiC#parts-list)
 - [Initial Headless Raspberry Pi Setup](https://github.com/zakattack9/WRaPiC#initial-headless-raspberry-pi-setup)
+  - [Side Notes](https://github.com/zakattack9/WRaPiC#side-notes)
 - [Setting up the Jump Box and Cluster Network](https://github.com/zakattack9/WRaPiC#setting-up-the-jump-box-and-cluster-network)
+  - [Side Notes](https://github.com/zakattack9/WRaPiC#side-notes-1)
 - [Installing Docker and Kubernetes w/Flannel CNI](https://github.com/zakattack9/WRaPiC#installing-docker-and-kubernetes-wflannel-cni)
   - [Worker Node Setup](https://github.com/zakattack9/WRaPiC#worker-node-setup)
   - [Master Node Setup](https://github.com/zakattack9/WRaPiC#master-node-setup)
+  - [Side Notes](https://github.com/zakattack9/WRaPiC#side-notes-2)
 - [Extra Configurations](https://github.com/zakattack9/WRaPiC#extra-configurations)
-  - [Configure iTerm2 Window Arrangement and Profile](https://github.com/zakattack9/WRaPiC#configure-iterm-window-arrangement-and-profiles)
   - [Installing Calico CNI](https://github.com/zakattack9/WRaPiC#installing-calico-cni)
+    - [Side Notes](https://github.com/zakattack9/WRaPiC#side-notes-3)
+  - [Configure iTerm2 Window Arrangement and Profile](https://github.com/zakattack9/WRaPiC#configure-iterm-window-arrangement-and-profiles)
   - [Install zsh w/Oh-my-zsh and Configure Plugins](https://github.com/zakattack9/WRaPiC#install-zsh-woh-my-zsh-and-configure-plugins)
+    - [Side Notes](https://github.com/zakattack9/WRaPiC#side-notes-4)
 - [References](https://github.com/zakattack9/WRaPiC#references)
 
-As a disclaimer, most of these steps have been adapted from multiple articles, guides, and documentations found online. Much credit goes to Alex Ellis' [Kubernetes on Raspian](https://github.com/teamserverless/k8s-on-raspbian) repository and Tim Downey's [Baking a Pi Router](https://downey.io/blog/create-raspberry-pi-3-router-dhcp-server/) guide.
+As a disclaimer, most of these steps have been adapted from multiple articles, guides, and documentations found online which have been compiled into this README for easy access and a more straightforward cluster setup. Much credit goes to Alex Ellis' [Kubernetes on Raspian](https://github.com/teamserverless/k8s-on-raspbian) repository and Tim Downey's [Baking a Pi Router](https://downey.io/blog/create-raspberry-pi-3-router-dhcp-server/) guide.
 
 ## Parts List
 My cluster only includes 4 RPi 4B's though there is no limit to the amount of RPi's that can be used. If you choose to not go the PoE route, additional micro USB cables and a USB power hub will be needed to power the Pi's.
@@ -72,7 +78,7 @@ sudo dphys-swapfile swapoff
 sudo dphys-swapfile uninstall
 sudo systemctl disable dphys-swapfile
 ```
-12) At this point, if you want to use zsh as the default shell for your RPi, check out the *[Install zsh w/Oh-my-zsh and Configure Plugins](https://github.com/zakattack9/WRaPiC#install-zsh-woh-my-zsh-and-configure-plugins)* section, otherwise move on to the next section which sets up the jump box
+12) At this point, if you want to use zsh as the default shell for your RPi check out the *[Install zsh w/Oh-my-zsh and Configure Plugins](https://github.com/zakattack9/WRaPiC#install-zsh-woh-my-zsh-and-configure-plugins)* section, otherwise move on to the next section which sets up the jump box
 
 #### Side Notes
 - May need to comment out `SendEnv LANG LC_*` in `/etc/ssh/ssh_config` on host SSH client to fix RPi locale problems
@@ -308,7 +314,7 @@ This section includes instructions for various installations and configurations 
 1) `sudo apt-get install zsh` to install [Z shell (zsh)](http://zsh.sourceforge.net/)
 2) `chsh -s $(which zsh)` to install default shell to zsh
 3) `sudo apt-get install git wget` to install git and wget packages
-  - make sure to install `git` and **not** `git-all` because git-all will replace `systemd` with `sysv` consequently stopping both Docker and K8s; if you did accidentally install `git-all` see *Side Notes* below
+  - make sure to install `git` and **not** `git-all` because git-all will replace `systemd` with `sysv` consequently stopping both Docker and K8s processes; if you did accidentally install `git-all` see *Side Notes* below
 4) Install [Oh-my-zsh](https://github.com/ohmyzsh/ohmyzsh) framework
 ```bash
 wget https://github.com/robbyrussell/oh-my-zsh/raw/master/tools/install.sh -O - | zsh
@@ -356,7 +362,8 @@ sudo reboot
 # after rebooting, double check that the below command displays "systemd"
 ps -p 1
 
-# K8s and Docker should both be running again if PID 1 is systemd—you do not need to repeat any K8s related setup again
+# K8s and Docker should both be running again if PID 1 is systemd
+# you do not need to repeat any K8s related setup again
 ```
 - If some commands are no longer be found while using zsh, it likely means your `$PATH` variable got screwed up; to fix this do the following
 ```bash
@@ -365,8 +372,8 @@ chsh -s $(which bash)
 # after typing in your password, close the terminal and log back into the RPi
 # once logged back into the RPi, your terminal should be back to using bash as the default shell
 
+# copy the output of the echo command below
 echo $PATH
-# copy the output of the above echo command
 
 nano ~/.zshrc
 # uncomment and replace...
@@ -376,7 +383,7 @@ export PATH=<output-from-echo-$PATH>
 # exit nano
 
 chsh -s $(which zsh)
-# close the shell and log back into the RPi
+# close the shell and ssh back into the RPi
 ```
 
 ## References
