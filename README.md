@@ -4,7 +4,7 @@ Wrapic is a Wireless Raspberry Pi Cluster that can run various containerized app
 In my setup, a single 5-port PoE switch provides power to four RPi's all of which are equipped with PoE hats. One Raspberry Pi acts as a jump box connecting to an external network through WiFi and forwarding traffic through its ethernet port; this provides the other 3 RPi's with an internet connection and separates the cluster onto its own private network. The jump box also acts as the Kubernetes master node and all other RPi's are considered worker nodes in the cluster.
 
 ### Contents
-Most sections include a *Side Notes* subsection that includes extra information for that specific section ranging from helpful commands to potential issues/solutions I came across of during my setup.
+Most sections include a *Side Notes* subsection that includes extra information for that specific section ranging from helpful commands to potential issues/solutions I encountered during my setup.
 - [Parts List](https://github.com/zakattack9/WRaPiC#parts-list)
 - [Initial Headless Raspberry Pi Setup](https://github.com/zakattack9/WRaPiC#initial-headless-raspberry-pi-setup)
   - [Side Notes](https://github.com/zakattack9/WRaPiC#side-notes)
@@ -23,7 +23,7 @@ Most sections include a *Side Notes* subsection that includes extra information 
   - [Configure iTerm2 Window Arrangement and Profile](https://github.com/zakattack9/WRaPiC#configure-iterm-window-arrangement-and-profiles)
 - [References](https://github.com/zakattack9/WRaPiC#references)
 
-As a disclaimer, most of these steps have been adapted from multiple articles, guides, and documentations found online which have been compiled into this README for easy access and a more straightforward cluster setup. Much credit goes to Alex Ellis' [Kubernetes on Raspian](https://github.com/teamserverless/k8s-on-raspbian) repository and Tim Downey's [Baking a Pi Router](https://downey.io/blog/create-raspberry-pi-3-router-dhcp-server/) guide.
+*As a disclaimer, most of these steps have been adapted from multiple articles, guides, and documentations found online which have been compiled into this README for easy access and a more straightforward cluster setup. Much credit goes to Alex Ellis' [Kubernetes on Raspian](https://github.com/teamserverless/k8s-on-raspbian) repository and Tim Downey's [Baking a Pi Router](https://downey.io/blog/create-raspberry-pi-3-router-dhcp-server/) guide.*
 
 ## Parts List
 My cluster only includes 4 RPi 4B's though there is no limit to the amount of RPi's that can be used. If you choose to not go the PoE route, additional micro USB cables and a USB power hub will be needed to power the Pi's.
@@ -338,7 +338,7 @@ sudo apt-get install systemd-sysv
 # reboot RPi for changes to take effect after sysv has been removed
 sudo reboot
 
-# after rebooting, double check that the below command displays "systemd"
+# after rebooting, double check that PID 1 is "systemd"
 ps -p 1
 
 # K8s and Docker should both be running again if PID 1 is systemd
