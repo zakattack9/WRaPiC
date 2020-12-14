@@ -72,6 +72,7 @@ sudo dphys-swapfile swapoff
 sudo dphys-swapfile uninstall
 sudo systemctl disable dphys-swapfile
 ```
+12) At this point, if you want to use zsh as the default shell for your RPi, check out the *[Install zsh w/Oh-my-zsh and Configure Plugins](https://github.com/zakattack9/WRaPiC#install-zsh-woh-my-zsh-and-configure-plugins)* section, otherwise move on to the next section which sets up the jump box
 
 #### Side Notes
 - May need to comment out `SendEnv LANG LC_*` in `/etc/ssh/ssh_config` on host SSH client to fix RPi locale problems
@@ -260,7 +261,7 @@ sudo rm -rf /var/lib/containerd
 ```
 [FATAL] plugin/loop: Loop (127.0.0.1:34536 -> :53) detected for zone ".", see coredns.io/plugins/loop#troubleshooting
 ```
-- Run the following if `kubectl get nodes` is not working; [this thread](https://discuss.kubernetes.io/t/the-connection-to-the-server-host-6443-was-refused-did-you-specify-the-right-host-or-port/552/28) discusses why `kubectl get nodes` may not be working and some potential solutions to prevent having to always run the below commands
+- Run the following if `kubectl get nodes` is returning `The connection to the server <ip-address>:6443 was refused - did you specify the right host or port?`; [this thread](https://discuss.kubernetes.io/t/the-connection-to-the-server-host-6443-was-refused-did-you-specify-the-right-host-or-port/552/28) discusses why `kubectl get nodes` may not be working and some potential solutions to prevent having to always run the below commands
 ```bash
 sudo -i
 swapoff -a
@@ -307,6 +308,7 @@ This section includes instructions for various installations and configurations 
 1) `sudo apt-get install zsh` to install [Z shell (zsh)](http://zsh.sourceforge.net/)
 2) `chsh -s $(which zsh)` to install default shell to zsh
 3) `sudo apt-get install git wget` to install git and wget packages
+  - make sure to install `git` and **not** `git-all` because git-all will replace `systemd` with `sysv` consequently stopping both Docker and K8s; if you did accidentally install `git-all` see *Side Notes* below
 4) Install [Oh-my-zsh](https://github.com/ohmyzsh/ohmyzsh) framework
 ```bash
 wget https://github.com/robbyrussell/oh-my-zsh/raw/master/tools/install.sh -O - | zsh
@@ -340,7 +342,23 @@ ZSH_THEME="powerlevel10k/powerlevel10k"
 11) `source .zshrc` and go through the p10k setup process
 
 #### Side Notes
-- If some commands can no longer be found while using zsh, it likely means your `$PATH` variable got screwed up; to fix this do the following
+- If `git-all` was accidentally installed, it is more than likely that PID 1 was configured to use sysv instead of systemd; check this by running `ps -p 1`, if it shows "systemd" then you should be fine (reboot first and double check again to make sure), otherwise if "init" is displayed then follow the commands below
+```bash
+# checks PID 1 which should display "init" (sysv)
+ps -p 1
+
+# systemd-sysv will uninstall sysv and revert back to systemd
+sudo apt-get install systemd-sysv
+
+# reboot RPi for changes to take effect after sysv has been removed
+sudo reboot
+
+# after rebooting, double check that the below command displays "systemd"
+ps -p 1
+
+# K8s and Docker should both be running again if PID 1 is systemd—you do not need to repeat any K8s related setup again
+```
+- If some commands are no longer be found while using zsh, it likely means your `$PATH` variable got screwed up; to fix this do the following
 ```bash
 chsh -s $(which bash)
 
@@ -358,11 +376,7 @@ export PATH=<output-from-echo-$PATH>
 # exit nano
 
 chsh -s $(which zsh)
-# exit and log back into the terminal
-```
-- If any `kubectl` commands are throwing a similar error to the one shown below, it's likely that K8s is no longer running on your RPi's; you can double check this by doing `docker ps` and seeing if there are any K8s related containers running, if not, you will likely need to rerun the `kubeadm init` command and follow the steps in *[Master Node Setup](https://github.com/zakattack9/WRaPiC#master-node-setup)*
-```
-The connection to the server 192.168.29.229:6443 was refused - did you specify the right host or port?
+# close the shell and log back into the RPi
 ```
 
 ## References
