@@ -246,7 +246,7 @@ kubeadm join 192.168.29.229:6443 --token 2t9e17.m8jbybvnnheqwwjp \
     --discovery-token-ca-cert-hash sha256:4ca2fa33d228075da93f5cb3d8337931b32c8de280a664726fe6fc73fba89563
 ```
 8) `kubectl get nodes` to check that all nodes were joined successfully
-9) At this point, all RPi's should be set up and ready to run anything on top of K8s
+9) At this point, all RPi's should be set up and ready to run anything on top of K8s; optionally, follow the *[Kubernetes Dashboard Setup](https://github.com/zakattack9/WRaPiC#kubernetes-dashboard-setup)* section to configure the dashboard
 
 #### Side Notes
 - To uninstall K8s use the following commands
@@ -364,7 +364,7 @@ chsh -s $(which zsh)
 ```
 
 ### Kubernetes Dashboard Setup
-This is a quick way to set up, run, and access the Kubernetes Dashboard remotely from another host outside the cluster network such as the computer used to ssh into the RPi cluster. These steps have been taken from the official [Kubernetes Dashabord documentation](https://kubernetes.io/docs/tasks/access-application-cluster/web-ui-dashboard/) and Oracle's [Access the Kubernetes Dashboard](https://docs.oracle.com/en/operating-systems/olcne/orchestration/dashboard.html#dashboard-start) guide.
+This is a quick way to set up, run, and access the Kubernetes Dashboard remotely from another host outside the cluster network such as the computer used to ssh into the RPi cluster. These steps have been adapted from the official [Kubernetes Dashabord documentation](https://kubernetes.io/docs/tasks/access-application-cluster/web-ui-dashboard/) and Oracle's [Access the Kubernetes Dashboard](https://docs.oracle.com/en/operating-systems/olcne/orchestration/dashboard.html#dashboard-start) guide.
 
 1) Deploy the K8s dashboard from the master node with the following command
 ```bash
@@ -376,7 +376,7 @@ kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0/a
 kubectl -n kube-system describe $(kubectl -n kube-system \
 get secret -n kube-system -o name | grep namespace) | grep token:
 ``` 
-4) Run the following command from the remote device where the dashboard will be accessed; replace `<username>` with username of the master node (the default is `pi`) and `ip-address` with the ip address of the master node's ip (may use `ifconfig`)
+4) Run the following command from the remote device where the dashboard will be accessed; replace `<username>` with username of the master node (the default is `pi`) and `ip-address` with the ip address of the master node's ip (may use `ifconfig wlan0` if the master node is the jump box)
 ```bash
 ssh -L 8001:127.0.0.1:8001 <username>@<ip-address>
 ```
