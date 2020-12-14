@@ -344,8 +344,9 @@ ps -p 1
 # K8s and Docker should both be running again if PID 1 is systemd
 # you do not need to repeat any K8s related setup again
 ```
-- If some commands are no longer be found while using zsh, it likely means your `$PATH` variable got screwed up; to fix this do the following
+- If some commands can no longer be found while using zsh, it likely means your `$PATH` variable got screwed up; to fix this do the following
 ```bash
+# temporarily switch the default shell back to bash
 chsh -s $(which bash)
 
 # after typing in your password, close the terminal and log back into the RPi
@@ -354,6 +355,7 @@ chsh -s $(which bash)
 # copy the output of the echo command below
 echo $PATH
 
+# update .zshrc to export the correct PATH variable on start up
 nano ~/.zshrc
 # uncomment and replace...
 export PATH=$HOME/bin:/usr/local/bin:$PATH
@@ -361,10 +363,11 @@ export PATH=$HOME/bin:/usr/local/bin:$PATH
 export PATH=<output-from-echo-$PATH>
 # exit nano
 
+# switch the default shell back to zsh
 chsh -s $(which zsh)
 # close the shell and ssh back into the RPi
 ```
-- The `docker` and `kubectl` Oh-my-zsh plugins adds tab completion when using the either command; as a bonus, the kubectl plugin also adds [aliases](https://github.com/ohmyzsh/ohmyzsh/tree/master/plugins/kubectl#aliases) for common kubectl commands such as `k` for `kubectl`
+- The `docker` and `kubectl` [Oh-my-zsh plugins](https://github.com/ohmyzsh/ohmyzsh/wiki/Plugins) adds tab completion for both commands; as a bonus, the kubectl plugin also adds [aliases](https://github.com/ohmyzsh/ohmyzsh/tree/master/plugins/kubectl#aliases) for common kubectl commands such as `k` for `kubectl`
 
 ### Kubernetes Dashboard Setup
 This is a quick way to set up, run, and access the Kubernetes Dashboard remotely from another host outside the cluster network such as the computer used to ssh into the RPi cluster. These steps have been adapted from the official [Kubernetes Dashabord documentation](https://kubernetes.io/docs/tasks/access-application-cluster/web-ui-dashboard/) and Oracle's [Access the Kubernetes Dashboard](https://docs.oracle.com/en/operating-systems/olcne/orchestration/dashboard.html#dashboard-start) guide.
