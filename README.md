@@ -294,6 +294,39 @@ strace -eopenat kubectl version
 	- `<role>` should be the same if you're setting the role for a node currently with a role set as `<none>`
 - `kubectl label node <node-name> node-role.kubernetes.io/<role>-` to remove a label
 
+## Install MetalLB
+Need to check if the same address range as router needs to be used for `addresses` in `metallb-config.yml`
+The following steps have been taken directly from [MetalLB's Installation Documentation](https://metallb.universe.tf/installation/)
+
+1) Create the `metallb-system` namespace with the following
+```bash
+kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.9.5/manifests/namespace.yaml
+```
+2) Create the MetalLB deployment with the following
+```bash
+kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.9.5/manifests/metallb.yaml
+```
+3) Create a `memberlist` secret containing the `secretkey` to [encrypt communication between speakers](https://metallb.universe.tf/installation/#installation-by-manifest)
+```bash
+kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)"
+```
+4) `sudo nano metallb-config.yaml` to create a MetalLB config map with layer 2 mode configuration and paste the folllowing, where addresses is an addresses range of your choice
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: metallb-system
+  name: config
+data:
+  config: |
+    address-pools:
+    - name: default
+      protocol: layer2
+      addresses:
+      - 192.168.1.240-192.168.1.250
+```
+5) `kubectl apply -f metallb-config.yaml` to apply the configuration and start MetalLB
+
 ## Extra Configurations
 This section includes instructions for various installations and configurations that are optional, but may be useful for your cluster needs.
 
