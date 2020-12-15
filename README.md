@@ -61,6 +61,7 @@ network={
   psk="<WiFi-password>"
 }
 ```
+  - The remote machine which will be used to configure and ssh into all the RPi's should be on the same network as declared in the above `wpa_supplicant.conf`
 4) Insert the micro SD card back into the RPi and power it on
 5) `ssh pi@raspberrypi.local` to connect to the RPi; `ping raspberrypi.local` may also be used to get the RPi's IP address to run `ssh pi@<ip-address>`
 6) `sudo raspi-config` to access the RPi configuration menu for making the following recommended changes
@@ -94,6 +95,13 @@ sudo dphys-swapfile swapoff && sudo dphys-swapfile uninstall && sudo update-rc.d
 
 ## Setting up the Jump Box and Cluster Network
 The following steps will set up the RPi jump box such that it acts as a DHCP server and DNS forwarder. It is assumed that at this point all RPi's have already been configured and are connected to the switch.
+
+### Preparation
+Before the jump box is set up, it's important to delete the `wpa_supplicant.conf` files on all RPi's **except** the jump box itself; this is because we want to force the RPi's onto our private cluster network thats separated via our switch and jump box. The jump box will maintain its WiFi connection forwarding internet out its ethernet port and into the switch who then feeds it to the other connected RPi's.
+
+1) `sudo rm /etc/wpa_supplicant/wpa_supplicant.conf` to delete the `wpa_supplicant.conf`
+2) `sudo reboot` for changes to take effect
+3) Prior to steps 1 and 2, you could ssh into the RPi's directly from your remote machine since they were on the same WiFi network
 
 1) Set up a [static IP address](https://www.raspberrypi.org/documentation/configuration/tcpip/) for both ethernet and WiFi interfaces by creating a [dhcpcd.conf](https://manpages.debian.org/testing/dhcpcd5/dhcpcd.conf.5.en.html) in `/etc/`
 ```
@@ -163,7 +171,7 @@ no-resolv
 6) `sudo nano /etc/init.d/dnsmasq` and add `sleep 10` to the top of the file to prevent errors with booting up dnsmasq
 7) `sudo reboot` to reboot the RPi for dnsmasq changes to take effect
 8) ssh back into the RPi jump box and ensure that dnsmasq is running with `sudo service dnsmasq status`
-9) `sudo nano /etc/sysctl.conf` and uncomment `net.ipv4.ip_forward=1` to enable IPv4 forwarding
+9) `sudo nano /etc/sysctl.conf` and uncomment `net.ipv4.ip_forward=1` to enable NAT rules with iptables
 10) Add the following `iptables` rules to enable port forwarding
 ```bash
 sudo iptables -t nat -A POSTROUTING -o wlan0 -j MASQUERADE
@@ -248,7 +256,7 @@ kubeadm join 192.168.29.229:6443 --token 2t9e17.m8jbybvnnheqwwjp \
     --discovery-token-ca-cert-hash sha256:4ca2fa33d228075da93f5cb3d8337931b32c8de280a664726fe6fc73fba89563
 ```
 8) `kubectl get nodes` to check that all nodes were joined successfully
-9) At this point, all RPi's should be set up and ready to run anything on top of K8s; optionally, follow the *[Kubernetes Dashboard Setup](https://github.com/zakattack9/WRaPiC#kubernetes-dashboard-setup)* section to configure the dashboard
+9) At this point, all RPi's should be set up and ready to run almost anything on top of K8s; optionally, follow the *[Kubernetes Dashboard Setup](https://github.com/zakattack9/WRaPiC#kubernetes-dashboard-setup)* section to configure the dashboard
 
 #### Side Notes
 - To uninstall K8s use the following commands
@@ -425,6 +433,9 @@ http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kube
 - [Remote Kubernetes Dashboard](https://docs.oracle.com/en/operating-systems/olcne/orchestration/dashboard.html#dashboard-remote)
 
 ## TODO
+- need to fix headless RPi setup section such that only the master node/jump box has a wpa_supplicant created for it; all other nodes should be accessed via sshing into the master node first and then into the respective worker node
+- simplify steps for fixing PATH var
+- review if any steps can be simplified by using another package (e.g. sed, awk, etc.)
 - add Weave Net instructions to docs
 - add iTerm2 profile config instructions
 - set up ansible playbooks:
@@ -432,6 +443,4 @@ http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kube
 	- RPi disable swap and SSH key setup
 	- RPi kubernetes setup
 - disable SSH password access (keys only)
-- install zsh with plugins (zsh-syntax-highlighting, zsh-autosuggest, docker, kubernetes)
-- install powerlevel10k
 - set up a reverse SSH tunnel to allow for direct SSH into worker nodes in the internal cluster network from MBP without needing to SSH from the Pi router
