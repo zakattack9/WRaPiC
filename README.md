@@ -294,7 +294,7 @@ strace -eopenat kubectl version
 	- `<role>` should be the same if you're setting the role for a node currently with a role set as `<none>`
 - `kubectl label node <node-name> node-role.kubernetes.io/<role>-` to remove a label
 
-## Install MetalLB
+## Install MetalLB and ingress-nginx
 Need to check if the same address range as router needs to be used for `addresses` in `metallb-config.yml`
 The following steps have been taken directly from [MetalLB's Installation Documentation](https://metallb.universe.tf/installation/)
 
@@ -326,6 +326,10 @@ data:
       - 192.168.1.240-192.168.1.250
 ```
 5) `kubectl apply -f metallb-config.yaml` to apply the configuration and start MetalLB
+6) Install [ingress-nginx](https://github.com/kubernetes/ingress-nginx) with the command below
+```bash
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/provider/baremetal/deploy.yaml
+```
 
 ## Extra Configurations
 This section includes instructions for various installations and configurations that are optional, but may be useful for your cluster needs.
