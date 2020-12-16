@@ -442,7 +442,7 @@ This is a quick way to set up, run, and access the Kubernetes Dashboard remotely
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0/aio/deploy/recommended.yaml
 ```
 2) `kubectl proxy` to start the proxy forwarding traffic to the internal pod where the dashboard is running
-3) Use the command below to get the Bearer token needed to log into the dashboard; alternatively, a sample user with a coresspoding Bearer token can be created by following [this guide](https://github.com/kubernetes/dashboard/blob/master/docs/user/access-control/creating-sample-user.md)
+3) Use the command below to get the Bearer token needed to log in to the dashboard; alternatively, a sample user with a corresponding Bearer token can be created by following [this guide](https://github.com/kubernetes/dashboard/blob/master/docs/user/access-control/creating-sample-user.md)
 ```bash
 kubectl -n kube-system describe $(kubectl -n kube-system \
 get secret -n kube-system -o name | grep namespace) | grep token:
@@ -482,12 +482,13 @@ http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kube
 - `ssh -t pi@routerPi.local 'ssh pi@workerNode3Pi.local'`
 
 ## References
-- [Disabling swap](https://www.raspberrypi.org/forums/viewtopic.php?p=1488821)
-- [Alex Ellis' K8s on Raspian repo](https://github.com/teamserverless/k8s-on-raspbian)
-- [Tim Downey's RPi Router guide](https://downey.io/blog/create-raspberry-pi-3-router-dhcp-server/)
-- [Richard Youngkin's K8s cluster guide](https://medium.com/better-programming/how-to-set-up-a-raspberry-pi-cluster-ff484a1c6be9)
-- [Install zsh on Linux](https://linoxide.com/tools/install-zsh-on-linux/)
+- [Disabling Swap](https://www.raspberrypi.org/forums/viewtopic.php?p=1488821)
+- [Alex Ellis' K8s On Raspian Repo](https://github.com/teamserverless/k8s-on-raspbian)
+- [Tim Downey's RPi Router Guide](https://downey.io/blog/create-raspberry-pi-3-router-dhcp-server/)
+- [Richard Youngkin's RPi K8s Cluster Guide](https://medium.com/better-programming/how-to-set-up-a-raspberry-pi-cluster-ff484a1c6be9)
+- [Install zsh On Linux](https://linoxide.com/tools/install-zsh-on-linux/)
 - [Remote Kubernetes Dashboard](https://docs.oracle.com/en/operating-systems/olcne/orchestration/dashboard.html#dashboard-remote)
+- [How To Expose Your Services With Kubernetes](https://medium.com/better-programming/how-to-expose-your-services-with-kubernetes-ingress-7f34eb6c9b5a)
 
 ## TODO
 - need to fix headless RPi setup section such that only the master node/jump box has a wpa_supplicant created for it; all other nodes should be accessed via sshing into the master node first and then into the respective worker node
