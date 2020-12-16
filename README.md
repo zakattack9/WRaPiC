@@ -325,7 +325,8 @@ data:
     - name: default
       protocol: layer2
       addresses:
-      - 192.168.1.240-192.168.1.250
+      # sample address range 
+      - 192.168.1.240-192.168.1.250 
 ```
 5) `kubectl apply -f metallb-config.yaml` to apply the configuration and start MetalLB
 6) `kubectl get pods -n metallb-system` to ensure that all pods are running
@@ -338,6 +339,28 @@ kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/mast
 kubectl edit service ingress-nginx-controller -n ingress-nginx
 ```
 9) `kubectl get all -n ingress-nginx` to ensure that all ingress-nginx pods are running and all jobs (create/patch) completed successfully
+10) Verify that the ingress controller is working properly by doing the following
+```bash
+kubectl get service -n ingress-nginx
+# two services should be displayed: LoadBalancer and ClusterIP
+# copy the external IP of your LoadBalancer
+# the external IP should be within the address range of assigned in metallb-config.yaml
+
+curl http://<lb-external-ip>
+# you should get back html displaying "404 Not Found"
+# this indicates that the ingress-nginx-controller received the request and attempted to direct it to the correct pod
+# we have confirmed that our nginx ingress controller is working
+```
+```html
+<!-- sample response after curling the ingress-nginx LoadBalancer -->
+<html>
+<head><title>404 Not Found</title></head>
+<body>
+<center><h1>404 Not Found</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+```
 
 #### Side Notes
 - If the `ingress-nginx-admission-patch` fails and does not show 1/1 completions when doing `kubectl get all -n ingress-nginx` it may help to delete and reinstall `ingress-nginx` by doing the following
