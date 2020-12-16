@@ -14,12 +14,14 @@ Most sections include a *Side Notes* subsection that includes extra information 
   - [Worker Node Setup](https://github.com/zakattack9/WRaPiC#worker-node-setup)
   - [Master Node Setup](https://github.com/zakattack9/WRaPiC#master-node-setup)
   - [Side Notes](https://github.com/zakattack9/WRaPiC#side-notes-2)
+- [Install MetalLB and ingress-nginx](https://github.com/zakattack9/WRaPiC#install-metallb-and-ingress-nginx)
+  - [Side Notes](https://github.com/zakattack9/WRaPiC#side-notes-3)
 - [Extra Configurations](https://github.com/zakattack9/WRaPiC#extra-configurations)
   - [Install zsh w/Oh-my-zsh and Configure Plugins](https://github.com/zakattack9/WRaPiC#install-zsh-woh-my-zsh-and-configure-plugins)
-    - [Side Notes](https://github.com/zakattack9/WRaPiC#side-notes-3)
+    - [Side Notes](https://github.com/zakattack9/WRaPiC#side-notes-4)
   - [Kubernetes Dashboard Setup](https://github.com/zakattack9/WRaPiC#kubernetes-dashboard-setup)
   - [Installing Calico CNI](https://github.com/zakattack9/WRaPiC#installing-calico-cni)
-    - [Side Notes](https://github.com/zakattack9/WRaPiC#side-notes-4)
+    - [Side Notes](https://github.com/zakattack9/WRaPiC#side-notes-5)
   - [Configure iTerm2 Window Arrangement and Profile](https://github.com/zakattack9/WRaPiC#configure-iterm-window-arrangement-and-profiles)
 - [References](https://github.com/zakattack9/WRaPiC#references)
 
@@ -326,9 +328,27 @@ data:
       - 192.168.1.240-192.168.1.250
 ```
 5) `kubectl apply -f metallb-config.yaml` to apply the configuration and start MetalLB
-6) Install [ingress-nginx](https://github.com/kubernetes/ingress-nginx) with the command below
+6) `kubectl get pods -n metallb-system` to ensure that all pods are running
+7) Install [ingress-nginx](https://github.com/kubernetes/ingress-nginx) with the command below
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/provider/baremetal/deploy.yaml
+```
+8) Edit the `ingress-nginx-controller` and change `spec.type` from `NodePort` to `LoadBalancer`
+```bash
+kubectl edit service ingress-nginx-controller -n ingress-nginx
+```
+9) `kubectl get all -n ingress-nginx` to ensure that all ingress-nginx pods are running and all jobs (create/patch) completed successfully
+
+#### Side Notes
+- If the `ingress-nginx-admission-patch` fails and does not show 1/1 completions when doing `kubectl get all -n ingress-nginx` it may help to delete and reinstall `ingress-nginx` by doing the following
+```bash
+# remove all resources related to ingress-nginx
+kubectl delete namespace ingress-nginx
+
+# verify that no resources from the ingress-nginx namespace exists
+kubectl get all -A
+
+# follow steps 8 and 9 again to reapply and configure ingress-nginx
 ```
 
 ## Extra Configurations
