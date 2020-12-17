@@ -232,14 +232,21 @@ curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add
 5) `sudo sysctl net.bridge.bridge-nf-call-iptables=1`
 
 ### Master Node Setup
-These steps should be performed only on one RPi (I used the RPi jump box).
+The following steps should be performed only on one RPi (I used the RPi jump box). This section assumes that you're running an `armhf` architecture on your RPi's and therefore will use either [Flannel](https://github.com/coreos/flannel) or [Weave Net](https://github.com/weaveworks/weave) as your cluster's CNI.
 
 1) `sudo kubeadm config images pull -v3` to pull down the images required for the K8s master node
 2) `sudo nano /etc/resolv.conf` and ensure that it does not have `nameserver 127.0.0.1` 
   - If `nameserver 127.0.0.1` exists, remove it and replace it with another DNS IP address that isn't the loopback address, then double check that `DNSMASQ_EXCEPT=lo` has been added in `/etc/default/dnsmasq` to prevent dnsmasq from overwriting/adding `nameserver 127.0.0.1` to `/etc/resolv.conf` upon reboot
   - This step is crucial to prevent coredns pods from crashing upon running `kubeadm init`
-3) `sudo kubeadm init --token-ttl=0 --pod-network-cidr=10.244.0.0/16` to initialize kubeadm with the Flannel cidr default
-  - When this command finishes, save the `kubeadm join` command provided by `kubeadm init` for later
+3) Initialize the master node and save the `kubeadm join` command provided after the `kubeadm init` finishes; the init command will depend on the CNI of that you choose
+##### Flannel
+```bash
+sudo kubeadm init --token-ttl=0 --pod-network-cidr=10.244.0.0/16
+```
+##### Weave Net
+```bash
+sudo kubeadm init --token-ttl=0
+```
 4) Run following commands after `kubeadm init` finishes
 ```bash
 mkdir -p $HOME/.kube
@@ -248,9 +255,14 @@ sudo chown $(id -u):$(id -g) $HOME/.kube/config
 ```
 5) `kubectl get pods -n kube-system` to double check the status of all master node pods (each should have a status of "Running")
   - If the coredns pods are failing, see the *Side Notes* for this section
-6) Apply [Flannel](https://github.com/coreos/flannel) config
+6) Apply the appropriate CNI config to your cluster
+##### Flannel
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+```
+##### Weave Net
+```bash
+kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
 ```
 7) Run the `kubeadm join` command saved in step 3, on all worker nodes, an example join command is provided below
 ```bash
@@ -258,7 +270,9 @@ kubeadm join 192.168.29.229:6443 --token 2t9e17.m8jbybvnnheqwwjp \
     --discovery-token-ca-cert-hash sha256:4ca2fa33d228075da93f5cb3d8337931b32c8de280a664726fe6fc73fba89563
 ```
 8) `kubectl get nodes` to check that all nodes were joined successfully
-9) At this point, all RPi's should be set up and ready to run almost anything on top of K8s; optionally, follow the *[Kubernetes Dashboard Setup](https://github.com/zakattack9/WRaPiC#kubernetes-dashboard-setup)* section to configure the dashboard
+9) At this point, all RPi's should be set up and ready to run almost anything on top of K8s; however, if you'd like to expose services within your cluster for external access, follow the next section which will install a load balancer and ingress controller
+
+*Optionally, you can now follow the [Kubernetes Dashboard Setup](https://github.com/zakattack9/WRaPiC#kubernetes-dashboard-setup) section to configure the dashboard for cluster monitoring*
 
 #### Side Notes
 - To uninstall K8s use the following commands
@@ -297,7 +311,7 @@ strace -eopenat kubectl version
 - `kubectl label node <node-name> node-role.kubernetes.io/<role>-` to remove a label
 
 ## Install MetalLB and ingress-nginx
-Need to check if the same address range as router needs to be used for `addresses` in `metallb-config.yml`
+**Need to check if the same address range as router needs to be used for `addresses` in `metallb-config.yml`.**
 The following steps have been taken directly from [MetalLB's Installation Documentation](https://metallb.universe.tf/installation/)
 
 1) Create the `metallb-system` namespace with the following
@@ -517,7 +531,7 @@ http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kube
 - need to fix headless RPi setup section such that only the master node/jump box has a wpa_supplicant created for it; all other nodes should be accessed via sshing into the master node first and then into the respective worker node
 - simplify steps for fixing PATH var
 - review if any steps can be simplified by using another package (e.g. sed, awk, etc.)
-- add Weave Net instructions to docs
+- ~add Weave Net instructions to docs~
 - add iTerm2 profile config instructions
 - set up ansible playbooks:
 	- RPi router configuration
