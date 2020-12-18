@@ -535,6 +535,17 @@ sudo iptables -t nat -A POSTROUTING -p tcp -d 10.10.0.0 --dport 80 -j SNAT --to-
 
 sudo iptables -t nat -I PREROUTING -i wlan0 -p tcp --dport 80 -j DNAT --to 10.10.0.0:80
 sudo iptables -t nat -I PREROUTING -i wlan0 -p tcp --dport 443 -j DNAT --to 10.10.0.0:443
+
+sudo iptables -t nat -A PREROUTING -i wlan0 -p tcp --dport 80 -j DNAT --to 10.10.0.0:80
+sudo iptables -t nat -A PREROUTING -i wlan0 -p tcp --dport 443 -j DNAT --to 10.10.0.0:443
+
+sudo iptables -t nat -D PREROUTING -i wlan0 -p tcp --dport 80 -j DNAT --to-destination 10.10.0.0:80
+sudo iptables -t nat -D POSTROUTING -p tcp -d 10.10.0.0 --dport 80 -j SNAT --to-source 10.0.0.1
+
+sudo iptables -t nat -D PREROUTING -i wlan0 -p tcp --dport 80 -j DNAT --to 10.10.0.0:80
+sudo iptables -t nat -D PREROUTING -i wlan0 -p tcp --dport 443 -j DNAT --to 10.10.0.0:443
+
+sudo dpkg-reconfigure iptables-persistent
 ```
 
 ## References
