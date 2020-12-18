@@ -238,7 +238,7 @@ The following steps should be performed only on one RPi (I used the RPi jump box
 2) `sudo nano /etc/resolv.conf` and ensure that it does not have `nameserver 127.0.0.1` 
   - If `nameserver 127.0.0.1` exists, remove it and replace it with another DNS IP address that isn't the loopback address, then double check that `DNSMASQ_EXCEPT=lo` has been added in `/etc/default/dnsmasq` to prevent dnsmasq from overwriting/adding `nameserver 127.0.0.1` to `/etc/resolv.conf` upon reboot
   - This step is crucial to prevent coredns pods from crashing upon running `kubeadm init`
-3) Initialize the master node and save the `kubeadm join` command provided after the `kubeadm init` finishes; the init command will depend on the CNI of that you choose
+3) Initialize the master node and save the `kubeadm join` command provided after the `kubeadm init` finishes—note that the init command will depend on the CNI of your choosing
 ##### Flannel
 ```bash
 sudo kubeadm init --token-ttl=0 --pod-network-cidr=10.244.0.0/16
@@ -272,7 +272,7 @@ kubeadm join 192.168.29.229:6443 --token 2t9e17.m8jbybvnnheqwwjp \
 8) `kubectl get nodes` to check that all nodes were joined successfully
 9) At this point, all RPi's should be set up and ready to run almost anything on top of K8s; however, if you'd like to expose services within your cluster for external access, follow the next section which will install a load balancer and ingress controller
 
-*Optionally, you can now follow the [Kubernetes Dashboard Setup](https://github.com/zakattack9/WRaPiC#kubernetes-dashboard-setup) section to configure the dashboard for cluster monitoring*
+*Optionally, you can now follow the [Kubernetes Dashboard Setup](https://github.com/zakattack9/WRaPiC#kubernetes-dashboard-setup) section to configure the Web UI for cluster monitoring*
 
 #### Side Notes
 - To uninstall K8s use the following commands
@@ -517,6 +517,25 @@ http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kube
 - `ssh -t pi@routerPi.local 'ssh pi@workerNode1.local'`
 - `ssh -t pi@routerPi.local 'ssh pi@workerNode2Pi.local'`
 - `ssh -t pi@routerPi.local 'ssh pi@workerNode3Pi.local'`
+
+### Install Prometheus and Grafana
+1) `sudo apt-get install -y golang` to install go needed for some of the make commands
+  - `sudo apt-get install -y build-essential` if `make` is not installed
+2) `make change_suffix suffix=<ip-address>` with the cluster IP of your RPi jump box's external ip address (`ifconfig wlan0`)
+3) Rebuild the manifests with the changes made to `vars.jsonnet`
+```bash
+make vendor
+make
+make deploy
+```
+
+```bash
+sudo iptables -t nat -A PREROUTING -i wlan0 -p tcp --dport 80 -j DNAT --to-destination 10.10.0.0:80
+sudo iptables -t nat -A POSTROUTING -p tcp -d 10.10.0.0 --dport 80 -j SNAT --to-source 10.0.0.1
+
+sudo iptables -t nat -I PREROUTING -i wlan0 -p tcp --dport 80 -j DNAT --to 10.10.0.0:80
+sudo iptables -t nat -I PREROUTING -i wlan0 -p tcp --dport 443 -j DNAT --to 10.10.0.0:443
+```
 
 ## References
 - [Disabling Swap](https://www.raspberrypi.org/forums/viewtopic.php?p=1488821)
