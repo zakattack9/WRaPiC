@@ -294,18 +294,31 @@ sudo rm -rf /var/lib/containerd
 ```
 [FATAL] plugin/loop: Loop (127.0.0.1:34536 -> :53) detected for zone ".", see coredns.io/plugins/loop#troubleshooting
 ```
-- Run the following if `kubectl get nodes` is returning `The connection to the server <ip-address>:6443 was refused - did you specify the right host or port?`; [this thread](https://discuss.kubernetes.io/t/the-connection-to-the-server-host-6443-was-refused-did-you-specify-the-right-host-or-port/552/28) discusses why `kubectl get nodes` may not be working and some potential solutions to prevent having to always run the below commands
+- If any `kubectl get` commands are throwing the error below, run the following commands to fix the issue without needing to reboot; additionally, [this thread](https://discuss.kubernetes.io/t/the-connection-to-the-server-host-6443-was-refused-did-you-specify-the-right-host-or-port/552/28) may provide some guidance to prevent having to always resolve this issue
+```
+The connection to the server <ip-address>:6443 was refused - did you specify the right host or port?
+```
 ```bash
 sudo -i
 swapoff -a
 exit
 strace -eopenat kubectl version
 ```
+- I also ran into the issue shown below where the Flannel pod on the master node kep continuously crashing; [this thread](https://github.com/coreos/flannel/issues/1060) helped me resolve the issue by running the following commands
+```
+Error registering network: failed to configure interface flannel.1: failed to ensure address of interface flannel.1: link has incompatible addresses. Remove additional addresses and try again
+```
+```bash
+# check which node the failing flannel pod is on (check the IP)
+kubectl get pods -n kube-system -o wide
+# delete the flannel network interface (run on node found in above command)
+sudo ip link delete flannel.1
+# delete the flannel pod
+kubectl delete pod -n kube-system kube-flannel-ds-<pod-id>
+# watch the status of the pods to ensure the flannel pod is running
+kubectl get pods -n kube-system -w
+```
 - `kubectl logs -n kube-system kube-flannel-ds-<pod-id>` to get logs of a specific Flannel pod
-- I also ran into [some issues](https://github.com/coreos/flannel/issues/1060) with the master node Flannel pod; this problem was resolved by running the following in order
-  - `sudo ip link delete flannel.1` on the master node (RPi jump box)
-  - `kubectl delete pod -n kube-system kube-flannel-ds-<pod-id>` to delete the Flannel pod
-  - Wait for K8s to automatically recreate the pod, then profit
 - `kubectl label node <node-name> node-role.kubernetes.io/<role>=<role>` to label nodes
 	- `<role>` should be the same if you're setting the role for a node currently with a role set as `<none>`
 - `kubectl label node <node-name> node-role.kubernetes.io/<role>-` to remove a label
@@ -470,6 +483,7 @@ chsh -s $(which zsh)
 # close the shell and ssh back into the RPi
 ```
 - The `docker` and `kubectl` [Oh-my-zsh plugins](https://github.com/ohmyzsh/ohmyzsh/wiki/Plugins) adds tab completion for both commands; as a bonus, the kubectl plugin also adds [aliases](https://github.com/ohmyzsh/ohmyzsh/tree/master/plugins/kubectl#aliases) for common kubectl commands such as `k` for `kubectl`
+- If pasting to the terminal is slow add `DISABLE_MAGIC_FUNCTIONS="true"` to the top of `~/.zshrc` and restart zsh with `exec zsh`
 
 ### Kubernetes Dashboard Setup
 This is a quick way to set up, run, and access the Kubernetes Dashboard remotely from another host outside the cluster network such as the computer used to ssh into the RPi cluster. These steps have been adapted from the official [Kubernetes Dashabord documentation](https://kubernetes.io/docs/tasks/access-application-cluster/web-ui-dashboard/) and Oracle's [Access the Kubernetes Dashboard](https://docs.oracle.com/en/operating-systems/olcne/orchestration/dashboard.html#dashboard-start) guide.
@@ -519,34 +533,26 @@ http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kube
 - `ssh -t pi@routerPi.local 'ssh pi@workerNode3Pi.local'`
 
 ### Install Prometheus and Grafana
+
+
 1) `sudo apt-get install -y golang` to install go needed for some of the make commands
   - `sudo apt-get install -y build-essential` if `make` is not installed
-2) `make change_suffix suffix=<ip-address>` with the cluster IP of your RPi jump box's external ip address (`ifconfig wlan0`)
+2) `make change_suffix suffix=<ip-address>.nip.io` with the cluster IP of your RPi jump box's external ip address (`ifconfig wlan0`)
 3) Rebuild the manifests with the changes made to `vars.jsonnet`
 ```bash
 make vendor
 make
 make deploy
 ```
-
+4) Add the following urles to the ip table to forward traffic from wlan0 to the LoadBalancer's internal cluster IP
 ```bash
-sudo iptables -t nat -A PREROUTING -i wlan0 -p tcp --dport 80 -j DNAT --to-destination 10.10.0.0:80
-sudo iptables -t nat -A POSTROUTING -p tcp -d 10.10.0.0 --dport 80 -j SNAT --to-source 10.0.0.1
-
 sudo iptables -t nat -I PREROUTING -i wlan0 -p tcp --dport 80 -j DNAT --to 10.10.0.0:80
 sudo iptables -t nat -I PREROUTING -i wlan0 -p tcp --dport 443 -j DNAT --to 10.10.0.0:443
-
-sudo iptables -t nat -A PREROUTING -i wlan0 -p tcp --dport 80 -j DNAT --to 10.10.0.0:80
-sudo iptables -t nat -A PREROUTING -i wlan0 -p tcp --dport 443 -j DNAT --to 10.10.0.0:443
-
-sudo iptables -t nat -D PREROUTING -i wlan0 -p tcp --dport 80 -j DNAT --to-destination 10.10.0.0:80
-sudo iptables -t nat -D POSTROUTING -p tcp -d 10.10.0.0 --dport 80 -j SNAT --to-source 10.0.0.1
-
-sudo iptables -t nat -D PREROUTING -i wlan0 -p tcp --dport 80 -j DNAT --to 10.10.0.0:80
-sudo iptables -t nat -D PREROUTING -i wlan0 -p tcp --dport 443 -j DNAT --to 10.10.0.0:443
-
 sudo dpkg-reconfigure iptables-persistent
 ```
+
+#### Side Notes
+- If the prometheus-adapter is constantly crashing, it may help delete the entire monitoring namespace and redeploy kube-prometheus again; I'd also reccomend deleting the all the kube-proxy nodes to restart them
 
 ## References
 - [Disabling Swap](https://www.raspberrypi.org/forums/viewtopic.php?p=1488821)
