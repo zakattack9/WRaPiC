@@ -1,7 +1,7 @@
 # Wrapic Documentation
 Wrapic is a Wireless Raspberry Pi Cluster that can run various containerized applications on top of full Kubernetes. What makes the cluster "wireless" is that it doesn't need to be physically connected to a router via ethernet, instead it bridges off WiFi to receive internet—this is great for situations where the router is inaccessible.
 
-In my setup, a single 5-port PoE switch provides power to four RPi's all of which are equipped with PoE hats. One Raspberry Pi acts as a jump box connecting to an external network through WiFi and forwarding traffic through its ethernet port; this provides the other 3 RPi's with an internet connection and separates the cluster onto its own private network. The jump box also acts as the Kubernetes master node and all other RPi's are considered worker nodes in the cluster.
+In my setup, a single 5-port PoE switch provides power to four RPi's all of which are equipped with PoE hats. One Raspberry Pi acts as a jump box connecting to an external network through WiFi and forwarding traffic through its ethernet port; this provides the other 3 RPi's with an internet connection and separates the cluster onto its own private network. The jump box also acts as the Kubernetes master node and all other RPi's are considered worker nodes in the cluster. The following setup documentation assumes this described setup where the master node doubles as a jump box—if a cluster without a jump box is desired, Alex Ellis' [Kubernetes on Raspian](https://github.com/teamserverless/k8s-on-raspbian) guide may be a better fit.
 
 ### Contents
 Most sections include a *Side Notes* subsection that includes extra information for that specific section ranging from helpful commands to potential issues/solutions I encountered during my setup.
@@ -10,7 +10,7 @@ Most sections include a *Side Notes* subsection that includes extra information 
   - [Side Notes](https://github.com/zakattack9/WRaPiC#side-notes)
 - [Setting up the Jump Box and Cluster Network](https://github.com/zakattack9/WRaPiC#setting-up-the-jump-box-and-cluster-network)
   - [Side Notes](https://github.com/zakattack9/WRaPiC#side-notes-1)
-- [Installing Docker and Kubernetes w/Flannel CNI](https://github.com/zakattack9/WRaPiC#installing-docker-and-kubernetes-wflannel-cni)
+- [Install Docker and Kubernetes w/Flannel CNI](https://github.com/zakattack9/WRaPiC#install-docker-and-kubernetes-wflannel-cni)
   - [Worker Node Setup](https://github.com/zakattack9/WRaPiC#worker-node-setup)
   - [Master Node Setup](https://github.com/zakattack9/WRaPiC#master-node-setup)
   - [Side Notes](https://github.com/zakattack9/WRaPiC#side-notes-2)
@@ -20,9 +20,11 @@ Most sections include a *Side Notes* subsection that includes extra information 
   - [Install zsh w/Oh-my-zsh and Configure Plugins](https://github.com/zakattack9/WRaPiC#install-zsh-woh-my-zsh-and-configure-plugins)
     - [Side Notes](https://github.com/zakattack9/WRaPiC#side-notes-4)
   - [Kubernetes Dashboard Setup](https://github.com/zakattack9/WRaPiC#kubernetes-dashboard-setup)
-  - [Installing Calico CNI](https://github.com/zakattack9/WRaPiC#installing-calico-cni)
+  - [Install Calico CNI](https://github.com/zakattack9/WRaPiC#install-calico-cni)
     - [Side Notes](https://github.com/zakattack9/WRaPiC#side-notes-5)
   - [Configure iTerm2 Window Arrangement and Profile](https://github.com/zakattack9/WRaPiC#configure-iterm-window-arrangement-and-profiles)
+  - [Install Prometheus and Grafana](https://github.com/zakattack9/WRaPiC#install-prometheus-and-grafana)
+    - [Side Notes](https://github.com/zakattack9/WRaPiC#side-notes-6)
 - [References](https://github.com/zakattack9/WRaPiC#references)
 
 *As a disclaimer, most of these steps have been adapted from multiple articles, guides, and documentations found online which have been compiled into this README for easy access and a more straightforward cluster setup. Much credit goes to Alex Ellis' [Kubernetes on Raspian](https://github.com/teamserverless/k8s-on-raspbian) repository and Tim Downey's [Baking a Pi Router](https://downey.io/blog/create-raspberry-pi-3-router-dhcp-server/) guide.*
@@ -190,7 +192,7 @@ sudo iptables -A FORWARD -i eth0 -o wlan0 -j ACCEPT
 - `sudo service dnsmasq restart` to restart dnsmasq
 - `sudo service dnsmasq stop` to stop dnsmasq (will restart on boot)
 
-## Installing Docker and Kubernetes w/Flannel CNI
+## Install Docker and Kubernetes w/Flannel CNI
 The following steps will install and configure Docker and Kubernetes on all RPi's. This setup uses Flannel as the Kubernetes CNI although Weave Net may also be used as an alternative. Calico CNI may be swapped out for Flannel/Weave Net providing that an OS with an `arm64` architecture has been installed on all RPi's.
 
 ### Worker Node Setup
@@ -288,14 +290,25 @@ sudo apt-get purge docker-ce docker-ce-cli containerd.io
 sudo rm -rf /var/lib/docker
 sudo rm -rf /var/lib/containerd
 ```
-- `kubectl rollout restart -n kube-system deployment/coredns` to restart coredns pods
-- `kubectl logs -n kube-system pod/coredns-<pod-id>` to get the logs of a specific coredns pod
-- I was getting the following error in the coredns logs for the coredns pods after starting up kubeadm in which the [linked coredns docs](https://coredns.io/plugins/loop/#troubleshooting) recommends adding `resolvConf: /etc/resolv.conf` to `/etc/kubernetes/kubelet.conf`; however, the solution for me was removing `nameserver 127.0.0.1` from `/etc/resolv.conf` before running `kubeadm init`
-```
+- If the coredns pods are stuck in `CrashLoopBackOff` and its logs are showing the error below, the [referenced coredns docs](https://coredns.io/plugins/loop/#troubleshooting) recommends adding `resolvConf: /etc/resolv.conf` to `/etc/kubernetes/kubelet.conf`; however, the following steps resolved the issue since dnsmasq on the RPi jump box was overwriting `resolv.conf`
+```console
 [FATAL] plugin/loop: Loop (127.0.0.1:34536 -> :53) detected for zone ".", see coredns.io/plugins/loop#troubleshooting
 ```
-- If any `kubectl get` commands are throwing the error below, run the following commands to fix the issue without needing to reboot; additionally, [this thread](https://discuss.kubernetes.io/t/the-connection-to-the-server-host-6443-was-refused-did-you-specify-the-right-host-or-port/552/28) may provide some guidance to prevent having to always resolve this issue
+```bash
+# reset kubeadm which will undo any joined nodes
+sudo kubeadm reset
+# edit resolv.conf which coredns references on startup
+# delete "nameserver 127.0.0.1" if it exists
+# add "nameserver 1.1.1.1" or any DNS resolver
+sudo nano /etc/resolv.conf
+# initialize k8s cluster again with the correct init command from step 3
+sudo kubeadm init
+# it is important at this point to make sure that
+# DNSMASQ_EXCEPT=lo was added to the end of /etc/default/dnsmasq
+# this prevents the loopback address from being added back to resolv.conf on reboot
 ```
+- If `kubectl get` is throwing the error below, run the following commands to fix the issue without needing to reboot; additionally, [this thread](https://discuss.kubernetes.io/t/the-connection-to-the-server-host-6443-was-refused-did-you-specify-the-right-host-or-port/552/28) provides some guidance to help resolve this issue—running the disable swap commands individually seemed to do the trick
+```console
 The connection to the server <ip-address>:6443 was refused - did you specify the right host or port?
 ```
 ```bash
@@ -304,8 +317,8 @@ swapoff -a
 exit
 strace -eopenat kubectl version
 ```
-- I also ran into the issue shown below where the Flannel pod on the master node kep continuously crashing; [this thread](https://github.com/coreos/flannel/issues/1060) helped me resolve the issue by running the following commands
-```
+- If the Flannel pods are continuously crashing and its logs are showing the error below, [this thread](https://github.com/coreos/flannel/issues/1060) helped resolve the issue by running the following commands
+```console
 Error registering network: failed to configure interface flannel.1: failed to ensure address of interface flannel.1: link has incompatible addresses. Remove additional addresses and try again
 ```
 ```bash
@@ -318,6 +331,8 @@ kubectl delete pod -n kube-system kube-flannel-ds-<pod-id>
 # watch the status of the pods to ensure the flannel pod is running
 kubectl get pods -n kube-system -w
 ```
+- `kubectl rollout restart -n kube-system deployment/coredns` to restart coredns pods
+- `kubectl logs -n kube-system pod/coredns-<pod-id>` to get the logs of a specific coredns pod
 - `kubectl logs -n kube-system kube-flannel-ds-<pod-id>` to get logs of a specific Flannel pod
 - `kubectl label node <node-name> node-role.kubernetes.io/<role>=<role>` to label nodes
 	- `<role>` should be the same if you're setting the role for a node currently with a role set as `<none>`
@@ -374,7 +389,7 @@ kubectl get service -n ingress-nginx
 # the external IP should be within the address range of assigned in metallb-config.yaml
 
 curl http://<lb-external-ip>
-# you should get back html displaying "404 Not Found"
+# curl should return html displaying "404 Not Found"
 # this indicates that the ingress-nginx-controller received the request and attempted to direct it to the correct pod
 # we have confirmed that our nginx ingress controller is working
 ```
@@ -508,7 +523,7 @@ http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kube
 ```
 6) Select the "Token" login option, paste the value of the token received in step 3, and click "Sign in"
 
-### Installing Calico CNI
+### Install Calico CNI
 - did not work (see side notes)
 - get calico yaml `curl https://docs.projectcalico.org/manifests/calico.yaml -O`
 - open `calico.yaml` in nano and search for `192.168.0.0/16` 
@@ -533,26 +548,43 @@ http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kube
 - `ssh -t pi@routerPi.local 'ssh pi@workerNode3Pi.local'`
 
 ### Install Prometheus and Grafana
+This section deploys Prometheus and Grafana to your cluster and exposes them externally through an Ingress. While there are many ways to deploy Prometheus and Grafana to K8s the [kube-prometheus](https://github.com/prometheus-operator/kube-prometheus) project makes this significantly easier without needing Helm or writing any yamls; unfortunately, kube-prometheus does not currently use Docker images that have support for armhf and will therefore fail to properly deploy on an armhf RPi cluster. Fortunately, Carlos Eduardo's [cluster-monitoring](https://github.com/carlosedp/cluster-monitoring) project has ported the kube-prometheus project to armhf which is what will be used in the following steps to deploy Prometheus and Grafana.
 
-
-1) `sudo apt-get install -y golang` to install go needed for some of the make commands
+1) `git clone https://github.com/carlosedp/cluster-monitoring && cd cluster-monitoring`
+2) `sudo apt-get update -y && sudo apt-get install -y golang` to install `go` which is needed for some of the `make` commands
   - `sudo apt-get install -y build-essential` if `make` is not installed
-2) `make change_suffix suffix=<ip-address>.nip.io` with the cluster IP of your RPi jump box's external ip address (`ifconfig wlan0`)
-3) Rebuild the manifests with the changes made to `vars.jsonnet`
+3) `ifconfig wlan0` **on the RPi jump box** to get the cluster's external ip address (used in the next step)
+4) Configure the yaml files that will deploy Prometheus and Grafana to your cluster; follow the appropriate section if you'd like to record and display temperature metrics 
+##### With Temperature Metrics
 ```bash
+# edit vars.jsonnet to enable temp metrics and configure the ingress ip address
+# set "enabled" to true for "armExporter" under "modules"
+# set "suffixDomain" to the ip address found in step 3 and append ".nip.io" to the end of it
+# e.g. 192.168.0.1 => 192.168.0.1.nip.io
+nano vars.jsonnet
 make vendor
 make
 make deploy
 ```
-4) Add the following urles to the ip table to forward traffic from wlan0 to the LoadBalancer's internal cluster IP
+##### Without Temperature Metrics
 ```bash
-sudo iptables -t nat -I PREROUTING -i wlan0 -p tcp --dport 80 -j DNAT --to 10.10.0.0:80
-sudo iptables -t nat -I PREROUTING -i wlan0 -p tcp --dport 443 -j DNAT --to 10.10.0.0:443
+# replace <ip-address> with the ip address found in step 3
+make change_suffix suffix=<ip-address>.nip.io
+make deploy
+``` 
+  - If an error occurs will applying the manifests rerun `make deploy` or `kubectl apply -f manifests/`
+5) If you haven't already, add the following urls to `iptables` to forward http and https traffic from wlan0 to the LoadBalancer's external-ip which can be found by running `kubectl get ingress -n ingress-nginx`
+```bash
+sudo iptables -t nat -I PREROUTING -i wlan0 -p tcp --dport 80 -j DNAT --to <lb-external-ip>:80
+sudo iptables -t nat -I PREROUTING -i wlan0 -p tcp --dport 443 -j DNAT --to <lb-external-ip>:443
 sudo dpkg-reconfigure iptables-persistent
 ```
 
 #### Side Notes
-- If the prometheus-adapter is constantly crashing, it may help delete the entire monitoring namespace and redeploy kube-prometheus again; I'd also reccomend deleting the all the kube-proxy nodes to restart them
+- If the prometheus-adapter pod is constantly crashing and throwing the error below, it may help to delete the entire monitoring namespace that was created by the cluster-monitoring project and redeploy kube-prometheus again with `make deploy`; I'd also reccomend deleting all the kube-proxy nodes in the `kube-system` namespace to manually restart them before redploying kube-prometheus again
+```
+communicating with server failed: Get \"https://10.96.0.1:443/version?timeout=32s\": dial tcp 10.96.0.1:443: i/o timeout
+```
 
 ## References
 - [Disabling Swap](https://www.raspberrypi.org/forums/viewtopic.php?p=1488821)
