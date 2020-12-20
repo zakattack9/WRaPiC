@@ -339,8 +339,7 @@ kubectl get pods -n kube-system -w
 - `kubectl label node <node-name> node-role.kubernetes.io/<role>-` to remove a label
 
 ## Install MetalLB and ingress-nginx
-**Need to check if the same address range as router needs to be used for `addresses` in `metallb-config.yml`.**
-The following steps have been taken directly from [MetalLB's Installation Documentation](https://metallb.universe.tf/installation/)
+The following steps have been taken directly from [MetalLB's Installation Documentation](https://metallb.universe.tf/installation/) and the [nginx-ingres Bare-metal Installation Documentation](https://kubernetes.github.io/ingress-nginx/deploy/#bare-metal)
 
 1) Create the `metallb-system` namespace with the following
 ```bash
@@ -354,7 +353,7 @@ kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.9.5/manife
 ```bash
 kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)"
 ```
-4) `sudo nano metallb-config.yaml` to create a MetalLB config map with layer 2 mode configuration and paste the folllowing, where addresses is an addresses range of your choice
+4) `sudo nano metallb-config.yaml` to create a MetalLB config map with layer 2 mode configuration and paste the folllowing, where addresses is an address range of your choice—this address range should not conflict with the pod network CIDR defined during `kubeadm init`
 ```yaml
 apiVersion: v1
 kind: ConfigMap
@@ -592,7 +591,7 @@ sudo dpkg-reconfigure iptables-persistent
 
 #### Side Notes
 - If the prometheus-adapter pod is constantly crashing and throwing the error below, it may help to delete the entire monitoring namespace that was created by the cluster-monitoring project and redeploy kube-prometheus again with `make deploy`; I'd also reccomend deleting all the kube-proxy nodes in the `kube-system` namespace to manually restart them before redploying kube-prometheus again
-```
+```console
 communicating with server failed: Get \"https://10.96.0.1:443/version?timeout=32s\": dial tcp 10.96.0.1:443: i/o timeout
 ```
 
