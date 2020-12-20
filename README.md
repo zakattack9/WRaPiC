@@ -385,8 +385,8 @@ kubectl edit service ingress-nginx-controller -n ingress-nginx
 ```bash
 kubectl get service -n ingress-nginx
 # two services should be displayed: LoadBalancer and ClusterIP
-# copy the external IP of your LoadBalancer
-# the external IP should be within the address range of assigned in metallb-config.yaml
+# copy the external-ip of your LoadBalancer
+# the external-ip should be within the address range of assigned in metallb-config.yaml
 
 curl http://<lb-external-ip>
 # curl should return html displaying "404 Not Found"
@@ -402,6 +402,13 @@ curl http://<lb-external-ip>
 <hr><center>nginx</center>
 </body>
 </html>
+```
+11) Add the following urls to `iptables` to forward http and https traffic from wlan0 to the LoadBalancer's external-ip
+```bash
+sudo iptables -t nat -I PREROUTING -i wlan0 -p tcp --dport 80 -j DNAT --to <lb-external-ip>:80
+sudo iptables -t nat -I PREROUTING -i wlan0 -p tcp --dport 443 -j DNAT --to <lb-external-ip>:443
+# persis the iptables rules across reboots
+sudo dpkg-reconfigure iptables-persistent
 ```
 
 #### Side Notes
@@ -580,7 +587,8 @@ sudo iptables -t nat -I PREROUTING -i wlan0 -p tcp --dport 443 -j DNAT --to <lb-
 sudo dpkg-reconfigure iptables-persistent
 ```
 6) `kubectl get ingress -n monitoring` to get the external URLs (the ".nip.io" addresses) to access Prometheus, Alertmanager, and Grafana from outside the cluster
-7) Check out Jeff Geerling's [RPi Cluster Episode 4](https://youtu.be/IafVCHkJbtI) video as he walks through a very similar setup proccess on camera and shows how to configure the custom Grafana dashboard that comes with the cluster-monitoring project (around [17:19](https://youtu.be/IafVCHkJbtI?t=1039) minute mark)
+7) `kubectl get pods -n monitoring` to ensure that all pods are running properly
+8) Check out Jeff Geerling's [RPi Cluster Episode 4](https://youtu.be/IafVCHkJbtI) video as he walks through a very similar setup proccess on camera and shows how to configure the custom Grafana dashboard that comes with the cluster-monitoring project (around [17:19](https://youtu.be/IafVCHkJbtI?t=1039) minute mark)
 
 #### Side Notes
 - If the prometheus-adapter pod is constantly crashing and throwing the error below, it may help to delete the entire monitoring namespace that was created by the cluster-monitoring project and redeploy kube-prometheus again with `make deploy`; I'd also reccomend deleting all the kube-proxy nodes in the `kube-system` namespace to manually restart them before redploying kube-prometheus again
@@ -593,7 +601,7 @@ communicating with server failed: Get \"https://10.96.0.1:443/version?timeout=32
 - [Alex Ellis' K8s On Raspian Repo](https://github.com/teamserverless/k8s-on-raspbian)
 - [Tim Downey's RPi Router Guide](https://downey.io/blog/create-raspberry-pi-3-router-dhcp-server/)
 - [Richard Youngkin's RPi K8s Cluster Guide](https://medium.com/better-programming/how-to-set-up-a-raspberry-pi-cluster-ff484a1c6be9)
-- [Sean Duffy's Building a Raspberry Pi Kubernetes Cluster Guide](https://www.shogan.co.uk/kubernetes/building-a-raspberry-pi-kubernetes-cluster-part-1-routing/)
+- [Sean Duffy's RPi K8s Cluster Guide](https://www.shogan.co.uk/kubernetes/building-a-raspberry-pi-kubernetes-cluster-part-1-routing/)
 - [Install zsh On Linux](https://linoxide.com/tools/install-zsh-on-linux/)
 - [Remote Kubernetes Dashboard](https://docs.oracle.com/en/operating-systems/olcne/orchestration/dashboard.html#dashboard-remote)
 - [How To Expose Your Services With Kubernetes](https://medium.com/better-programming/how-to-expose-your-services-with-kubernetes-ingress-7f34eb6c9b5a)
