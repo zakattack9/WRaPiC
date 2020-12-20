@@ -33,7 +33,7 @@ Most sections include a *Side Notes* subsection that includes extra information 
 My cluster only includes 4 RPi 4B's though there is no limit to the amount of RPi's that can be used. If you choose to not go the PoE route, additional micro USB cables and a USB power hub will be needed to power the Pi's.
 - *4x* Raspberry Pi 4B 2GB RAM
   - the 3B and 3B+ models will also suffice
-  - it is recommended to get at least 2GB of RAM if running full K8s
+  - it is recommended to get at least 2GB of RAM for running full K8s
 - *4x* Official Raspberry Pi PoE Hats
 - 5 Port PoE Gigabit Ethernet Switch
   - does not need to support PoE if you are not planning to purchase PoE hats
@@ -548,11 +548,11 @@ http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kube
 - `ssh -t pi@routerPi.local 'ssh pi@workerNode3Pi.local'`
 
 ### Install Prometheus and Grafana
-This section deploys Prometheus and Grafana to your cluster and exposes them externally through an Ingress. While there are many ways to deploy Prometheus and Grafana to K8s the [kube-prometheus](https://github.com/prometheus-operator/kube-prometheus) project makes this significantly easier without needing Helm or writing any yamls; unfortunately, kube-prometheus does not currently use Docker images that have support for armhf and will therefore fail to properly deploy on an armhf RPi cluster. Fortunately, Carlos Eduardo's [cluster-monitoring](https://github.com/carlosedp/cluster-monitoring) project has ported the kube-prometheus project to armhf which is what will be used in the following steps to deploy Prometheus and Grafana.
+This section deploys Prometheus and Grafana to your cluster and exposes them externally through an [Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/). While there are many ways to deploy Prometheus and Grafana to K8s the [kube-prometheus](https://github.com/prometheus-operator/kube-prometheus) project makes this significantly easier without needing Helm or writing any yamls; unfortunately, kube-prometheus does not currently use Docker images that have support for armhf and will therefore fail to properly deploy on an armhf RPi cluster. Fortunately, Carlos Eduardo's [cluster-monitoring](https://github.com/carlosedp/cluster-monitoring) project has ported the kube-prometheus project to armhf which is what will be used in the following steps to deploy Prometheus and Grafana.
 
 1) `git clone https://github.com/carlosedp/cluster-monitoring && cd cluster-monitoring`
-2) `sudo apt-get update -y && sudo apt-get install -y golang` to install `go` which is needed for some of the `make` commands
-  - `sudo apt-get install -y build-essential` if `make` is not installed
+2) `sudo apt-get update -y && sudo apt-get install -y golang` to install go which is needed for some of the make commands
+  - `sudo apt-get install -y build-essential` if make is not installed
 3) `ifconfig wlan0` **on the RPi jump box** to get the cluster's external ip address (used in the next step)
 4) Configure the yaml files that will deploy Prometheus and Grafana to your cluster; follow the appropriate section if you'd like to record and display temperature metrics 
 ##### With Temperature Metrics
@@ -579,6 +579,8 @@ sudo iptables -t nat -I PREROUTING -i wlan0 -p tcp --dport 80 -j DNAT --to <lb-e
 sudo iptables -t nat -I PREROUTING -i wlan0 -p tcp --dport 443 -j DNAT --to <lb-external-ip>:443
 sudo dpkg-reconfigure iptables-persistent
 ```
+6) `kubectl get ingress -n monitoring` to get the external URLs (the ".nip.io" addresses) to access Prometheus, Alertmanager, and Grafana from outside the cluster
+7) Check out Jeff Geerling's [RPi Cluster Episode 4](https://youtu.be/IafVCHkJbtI) video as he walks through a very similar setup proccess on camera and shows how to configure the custom Grafana dashboard that comes with the cluster-monitoring project (around [17:19](https://youtu.be/IafVCHkJbtI?t=1039) minute mark)
 
 #### Side Notes
 - If the prometheus-adapter pod is constantly crashing and throwing the error below, it may help to delete the entire monitoring namespace that was created by the cluster-monitoring project and redeploy kube-prometheus again with `make deploy`; I'd also reccomend deleting all the kube-proxy nodes in the `kube-system` namespace to manually restart them before redploying kube-prometheus again
@@ -591,9 +593,12 @@ communicating with server failed: Get \"https://10.96.0.1:443/version?timeout=32
 - [Alex Ellis' K8s On Raspian Repo](https://github.com/teamserverless/k8s-on-raspbian)
 - [Tim Downey's RPi Router Guide](https://downey.io/blog/create-raspberry-pi-3-router-dhcp-server/)
 - [Richard Youngkin's RPi K8s Cluster Guide](https://medium.com/better-programming/how-to-set-up-a-raspberry-pi-cluster-ff484a1c6be9)
+- [Sean Duffy's Building a Raspberry Pi Kubernetes Cluster Guide](https://www.shogan.co.uk/kubernetes/building-a-raspberry-pi-kubernetes-cluster-part-1-routing/)
 - [Install zsh On Linux](https://linoxide.com/tools/install-zsh-on-linux/)
 - [Remote Kubernetes Dashboard](https://docs.oracle.com/en/operating-systems/olcne/orchestration/dashboard.html#dashboard-remote)
 - [How To Expose Your Services With Kubernetes](https://medium.com/better-programming/how-to-expose-your-services-with-kubernetes-ingress-7f34eb6c9b5a)
+- [Carlos Eduardo's Cluster Monitoring Repo](https://github.com/carlosedp/cluster-monitoring) 
+- [Jeff Geerling's RPi Cluster Episode 4](https://www.youtube.com/watch?v=IafVCHkJbtI)
 
 ## TODO
 - need to fix headless RPi setup section such that only the master node/jump box has a wpa_supplicant created for it; all other nodes should be accessed via sshing into the master node first and then into the respective worker node
