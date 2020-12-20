@@ -1,3 +1,5 @@
+![Wrapic](./wrapic_image)
+
 # Wrapic Documentation
 Wrapic is a Wireless Raspberry Pi Cluster that can run various containerized applications on top of full Kubernetes. What makes the cluster "wireless" is that it doesn't need to be physically connected to a router via ethernet, instead it bridges off WiFi to receive internet—this is great for situations where the router is inaccessible.
 
@@ -339,7 +341,7 @@ kubectl get pods -n kube-system -w
 - `kubectl label node <node-name> node-role.kubernetes.io/<role>-` to remove a label
 
 ## Install MetalLB and ingress-nginx
-The following steps have been taken directly from [MetalLB's Installation Documentation](https://metallb.universe.tf/installation/) and the [nginx-ingres Bare-metal Installation Documentation](https://kubernetes.github.io/ingress-nginx/deploy/#bare-metal)
+The following steps have been taken directly from [MetalLB's Installation Documentation](https://metallb.universe.tf/installation/) and the [nginx-ingres Bare-metal Installation Documentation](https://kubernetes.github.io/ingress-nginx/deploy/#bare-metal).
 
 1) Create the `metallb-system` namespace with the following
 ```bash
@@ -402,7 +404,7 @@ curl http://<lb-external-ip>
 </body>
 </html>
 ```
-11) Add the following urls to `iptables` to forward http and https traffic from wlan0 to the LoadBalancer's external-ip
+11) Add the following urls to `iptables` to forward http/https traffic from wlan0 to the LoadBalancer's external-ip
 ```bash
 sudo iptables -t nat -I PREROUTING -i wlan0 -p tcp --dport 80 -j DNAT --to <lb-external-ip>:80
 sudo iptables -t nat -I PREROUTING -i wlan0 -p tcp --dport 443 -j DNAT --to <lb-external-ip>:443
