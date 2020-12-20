@@ -1,6 +1,5 @@
-![Wrapic](./wrapic_image.png)
-
 # Wrapic Documentation
+![Wrapic](./wrapic_image.png)
 Wrapic is a Wireless Raspberry Pi Cluster that can run various containerized applications on top of full Kubernetes. What makes the cluster "wireless" is that it doesn't need to be physically connected to a router via ethernet, instead it bridges off WiFi to receive internet—this is great for situations where the router is inaccessible.
 
 In my setup, a single 5-port PoE switch provides power to four RPi's all of which are equipped with PoE hats. One Raspberry Pi acts as a jump box connecting to an external network through WiFi and forwarding traffic through its ethernet port; this provides the other 3 RPi's with an internet connection and separates the cluster onto its own private network. The jump box also acts as the Kubernetes master node and all other RPi's are considered worker nodes in the cluster. The following setup documentation assumes this described setup where the master node doubles as a jump box—if a cluster without a jump box is desired, Alex Ellis' [Kubernetes on Raspian](https://github.com/teamserverless/k8s-on-raspbian) guide may be a better fit.
