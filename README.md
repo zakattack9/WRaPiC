@@ -612,7 +612,7 @@ brew install elastic/tap/elasticsearch-full
 # install kibana
 brew install elastic/tap/kibana-full
 ```
-2) Get the ip address of the external host which Elasticsearch and Kibana will be run on (use `ifconfig`); this is important so that we can bind `localhost` to its actual ip address which Fluent Bit can access from within the cluster
+2) Get the ip address of the external host which Elasticsearch and Kibana will be run on (use `ifconfig`); this is important so that we can bind `localhost` to an actual ip address which Fluent Bit can access from within the cluster in later steps
 3) Execute the `configure.sh` script (pass in the ip address found in the previous step) located in this repository to configure Elasticsearch and Kibana if they were installed via `brew` for MacOS; for Linux and Windows navigate to the `config/` folder in the unzipped Elasticsearch and Kibana packages to make the following changes
 ##### Elasticsearch
 ```bash
@@ -677,8 +677,8 @@ kubectl apply -f fluent-bit-ds.yaml
 10) You should now start to see logs in Kibana after an index is created under the "Discover" page
 
 #### Side Notes
-- `brew services start elastic/tap/elasticsearch-full` if you'd like to run Elasticsearch as a service on boot (MacOS only)
-- `brew services start elastic/tap/kibana-full` if you'd like to run Kibana as a service on boot (MacOS only)
+- `brew services start elastic/tap/elasticsearch-full` to run Elasticsearch as a service on boot (MacOS only)
+- `brew services start elastic/tap/kibana-full` to run Kibana as a service on boot (MacOS only)
 
 ## References
 - [Disabling Swap](https://www.raspberrypi.org/forums/viewtopic.php?p=1488821)
