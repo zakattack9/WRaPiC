@@ -57,7 +57,7 @@
 network.bind_host: 192.168.29.226
 http.port: 9200
 
-node.master: true
+# node.master: true
 # node.data: true
 transport.host: localhost
 transport.tcp.port: 9300

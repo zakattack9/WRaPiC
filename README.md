@@ -591,10 +591,25 @@ sudo dpkg-reconfigure iptables-persistent
 8) Check out Jeff Geerling's [RPi Cluster Episode 4](https://youtu.be/IafVCHkJbtI) video as he walks through a very similar setup proccess on camera and shows how to configure the custom Grafana dashboard that comes with the cluster-monitoring project (around [17:19](https://youtu.be/IafVCHkJbtI?t=1039) minute mark)
 
 #### Side Notes
-- If the prometheus-adapter pod is constantly crashing and throwing the error below, it may help to delete the entire monitoring namespace that was created by the cluster-monitoring project and redeploy kube-prometheus again with `make deploy`; I'd also reccomend deleting all the kube-proxy nodes in the `kube-system` namespace to manually restart them before redploying kube-prometheus again
+- If the prometheus-adapter pod is constantly crashing and throwing the error below, it may help to delete the entire monitoring namespace that was created by the cluster-monitoring project and redeploy kube-prometheus again with `make deploy`; I'd also reccomend deleting all the kube-proxy pods in the `kube-system` namespace to manually restart them before redploying kube-prometheus again
 ```console
 communicating with server failed: Get \"https://10.96.0.1:443/version?timeout=32s\": dial tcp 10.96.0.1:443: i/o timeout
 ```
+- If the kube-state-metrics pod is constantly crashing, I found that deleting the kube-flannel-ds pod on the same node seemed to resolve the issue; `sudo ip link delete flannel.1` should be run first before deleting the flannel pod off the same node
+
+### Install EFK Stack (Elasticsearch, Fluent Bit, Kibana)
+
+```bash
+kubectl create namespace logging
+kubectl create -f https://raw.githubusercontent.com/fluent/fluent-bit-kubernetes-logging/master/fluent-bit-service-account.yaml
+kubectl create -f https://raw.githubusercontent.com/fluent/fluent-bit-kubernetes-logging/master/fluent-bit-role.yaml
+kubectl create -f https://raw.githubusercontent.com/fluent/fluent-bit-kubernetes-logging/master/fluent-bit-role-binding.yaml
+kubectl create -f https://raw.githubusercontent.com/fluent/fluent-bit-kubernetes-logging/master/output/elasticsearch/fluent-bit-configmap.yaml
+kubectl create -f https://raw.githubusercontent.com/fluent/fluent-bit-kubernetes-logging/master/output/elasticsearch/fluent-bit-ds.yaml
+```
+
+`brew services start elastic/tap/elasticsearch-full`
+`brew services start elastic/tap/kibana-full`
 
 ## References
 - [Disabling Swap](https://www.raspberrypi.org/forums/viewtopic.php?p=1488821)
@@ -620,3 +635,4 @@ communicating with server failed: Get \"https://10.96.0.1:443/version?timeout=32
 	- RPi kubernetes setup
 - disable SSH password access (keys only)
 - set up a reverse SSH tunnel to allow for direct SSH into worker nodes in the internal cluster network from MBP without needing to SSH from the Pi router
+- add check to configure script to see if the configuration has been already to either the elasticsearch or kibana config files; if the config has already been added, simply modify the ip currently in the file
