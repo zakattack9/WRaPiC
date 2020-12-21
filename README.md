@@ -2,7 +2,7 @@
 ![Wrapic](./images/wrapic_image.png)
 Wrapic is a Wireless Raspberry Pi Cluster that can run various containerized applications on top of full Kubernetes. What makes the cluster "wireless" is that it doesn't need to be physically connected to a router via ethernet, instead it bridges off WiFi to receive internet—this is great for situations where the router is inaccessible.
 
-In my setup, a single 5-port PoE switch provides power to four RPi's all of which are equipped with PoE hats. One Raspberry Pi acts as a jump box connecting to an external network through WiFi and forwarding traffic through its ethernet port; this provides the other 3 RPi's with an internet connection and separates the cluster onto its own private network. The jump box also acts as the Kubernetes master node and all other RPi's are considered worker nodes in the cluster. The following setup documentation assumes this described setup where the master node doubles as a jump box—if a cluster without a jump box is desired, Alex Ellis' [Kubernetes on Raspian](https://github.com/teamserverless/k8s-on-raspbian) guide may be a better fit.
+In my setup, a single 5-port PoE switch provides power to four RPi 4B's all of which are equipped with PoE hats. One Raspberry Pi acts as a jump box connecting to an external network through WiFi and forwarding traffic through its ethernet port; this provides the other 3 RPi's with an internet connection and separates the cluster onto its own private network. The jump box also acts as the Kubernetes master node and all other RPi's are considered worker nodes in the cluster. The following setup documentation assumes this described setup where the master node doubles as a jump box—if a cluster without a jump box is desired, Alex Ellis' [Kubernetes on Raspian](https://github.com/teamserverless/k8s-on-raspbian) guide may be a better fit.
 
 ### Contents
 Most sections include a *Side Notes* subsection that includes extra information for that specific section ranging from helpful commands to potential issues/solutions I encountered during my setup.
@@ -602,8 +602,9 @@ communicating with server failed: Get \"https://10.96.0.1:443/version?timeout=32
 ### Install EFK Stack (Elasticsearch, Fluent Bit, Kibana)
 This section deploys Fluent Bit to the RPi K8s cluster and installs Elasticsearch and Kibana on a reachable host *outside* the cluster. Unfortunately, the ELK stack currently has Docker images that supports only `arm64` and `amd64` architectures (theoretically, the full ELK stack could be run on an RPi K8s cluster providing that each node runs on an arm64 architecture); while custom `armhf` Docker images could be built for the ELK stack, it's a lot easier to just run ELK on another host outside the cluster network that has a 64 bit architecture. One major benefit to running both Elasticsearch and Kibana outside of the cluster is that it will not add extra CPU/memory load to the cluster—this is especially true if the cluster runs on RPi's with 2GB of RAM. Fluent Bit was choosen over Fluentd because it was a more lightweight solution over Fluentd that required less resources to run optimally within the cluster; it is important to note that Fluentd does have Docker images that do support `armhf` and can be installed just as easily as Fluent Bit by following the [Kubernetes Fluentd Documentation](https://docs.fluentd.org/v/0.12/articles/kubernetes-fluentd). The following steps have been adapted from [Fluent Bit's Kubernetes Guide](https://fluentbit.io/documentation/0.14/installation/kubernetes.html) and installation documentation on MacOS with `brew` for [Elasticsearch](https://www.elastic.co/guide/en/elasticsearch/reference/7.10/brew.html) and [Kibana](https://www.elastic.co/guide/en/kibana/current/brew.html).
 
-1) On an external host *outside* the cluster that is on the same LAN as the RPi jump box (e.g. the laptop used to ssh into the cluster), execute the following commands to install Elasticsearch and Kibana (for MacOS only)
+1) On an external host *outside* the cluster that is on the same LAN as the RPi jump box (e.g. the laptop used to ssh into the cluster), execute the following commands to install Elasticsearch and Kibana (for MacOS only); for Linux and Windows, follow [Installing Elasticsearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/install-elasticsearch.html) and [Installing Kibana](https://www.elastic.co/guide/en/kibana/current/install.html) to download both packages as a zip
 ```bash
+# MacOS only
 # add the elastic repository to brew
 brew tap elastic/tap
 # install elasticsearch
@@ -611,8 +612,51 @@ brew install elastic/tap/elasticsearch-full
 # install kibana
 brew install elastic/tap/kibana-full
 ```
-2) Run the `configure.sh` script located in this repository to configure Elasticsearch and Kibana (scripts only works for MacOS)
-3) Run the following commands to create a `logging` namespace and configure the cluster for Fluent Bit
+2) Get the ip address of the external host which Elasticsearch and Kibana will be run on (use `ifconfig`); this is important so that we can bind `localhost` to its actual ip address which Fluent Bit can access from within the cluster
+3) Execute the `configure.sh` script (pass in the ip address found in the previous step) located in this repository to configure Elasticsearch and Kibana if they were installed via `brew` for MacOS; for Linux and Windows navigate to the `config/` folder in the unzipped Elasticsearch and Kibana packages to make the following changes
+##### Elasticsearch
+```bash
+# add the following to config/elasticsearch.yml under the "Network" section
+# replace <ip-address> with the ip found in step 2
+network.bind_host: <ip-address>
+http.port: 9200
+
+transport.host: localhost
+transport.tcp.port: 9300
+```
+##### Kibana
+```bash
+# uncomment and modify the following in config/kibana.yml 
+# replace <ip-address> with the ip found in step 2
+elasticsearch.hosts: ["http://<ip-address>:9200"]
+```
+4) In two separate terminal windows run `elasticsearch` and `kibana` using the following commands
+```bash
+# for MacOS (installed by brew)
+# in first window run
+elasticsearch
+# in second window run
+kibana
+
+# for Linux
+# navigate to the unzipped elasticsearch package
+# in first window run
+./bin/elasticsearch
+# navigate to the unzipped kibana package
+# in second window run
+./bin/kibana
+
+# for Windows
+# naviate to the unzipped elasticsearch package
+# in first window run
+.\bin\elasticsearch.bat
+# naviate to the unzipped kibana package
+# in second window run
+.\bin\kibana.bat
+```
+5) `curl http://<ip-address>:9200` where `<ip-address>` is the ip found in step 2, to check if Elasticsearch is running properly
+6) Navigate to `<ip-address>:5601/status` to check if Kibana is running properly
+7) Run the following commands to create a `logging` namespace and configure the cluster for Fluent Bit
 ```bash
 kubectl create namespace logging
 kubectl apply -f https://raw.githubusercontent.com/fluent/fluent-bit-kubernetes-logging/master/fluent-bit-service-account.yaml
@@ -620,7 +664,7 @@ kubectl apply -f https://raw.githubusercontent.com/fluent/fluent-bit-kubernetes-
 kubectl apply -f https://raw.githubusercontent.com/fluent/fluent-bit-kubernetes-logging/master/fluent-bit-role-binding.yaml
 kubectl apply -f https://raw.githubusercontent.com/fluent/fluent-bit-kubernetes-logging/master/output/elasticsearch/fluent-bit-configmap.yaml
 ```
-4) Configure the Fluent Bit DaemonSet before deploying
+8) Configure the Fluent Bit DaemonSet then apply it to all nodes within the cluster
 ```bash
 # retrieve the Fluent Bit DaemonSet yaml and save it to a file
 curl https://raw.githubusercontent.com/fluent/fluent-bit-kubernetes-logging/master/output/elasticsearch/fluent-bit-ds.yaml -o fluent-bit-ds.yaml
@@ -629,6 +673,8 @@ nano fluent-bit-ds.yaml
 # apply the edited DaemonSet to the cluster
 kubectl apply -f fluent-bit-ds.yaml
 ```
+9) `kubectl get pods -n logging` to ensure that all Fluent Bit pods are running properly and are forwarding logs to Elasticsearch
+10) You should now start to see logs in Kibana after an index is created under the "Discover" page
 
 #### Side Notes
 - `brew services start elastic/tap/elasticsearch-full` if you'd like to run Elasticsearch as a service on boot (MacOS only)
