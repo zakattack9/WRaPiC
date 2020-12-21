@@ -598,18 +598,39 @@ communicating with server failed: Get \"https://10.96.0.1:443/version?timeout=32
 - If the kube-state-metrics pod is constantly crashing, I found that deleting the kube-flannel-ds pod on the same node seemed to resolve the issue; `sudo ip link delete flannel.1` should be run first before deleting the flannel pod off the same node
 
 ### Install EFK Stack (Elasticsearch, Fluent Bit, Kibana)
+This section deploys Fluent Bit to the RPi K8s cluster and installs Elasticsearch and Kibana on a reachable host *outside* the cluster. Unfortunately, the ELK stack currently has Docker images that supports only `arm64` and `amd64` architectures (theoretically, the full ELK stack could be run on an RPi K8s cluster providing that each node runs on an arm64 architecture); while custom `armhf` Docker images could be built for the ELK stack, it's a lot easier to just run ELK on another host outside the cluster network that has a 64 bit architecture. One major benefit to running both Elasticsearch and Kibana outside of the cluster is that it will not add extra CPU/memory load to the cluster—this is especially true if the cluster runs on RPi's with 2GB of RAM. Fluent Bit was choosen over Fluentd because it was a more lightweight solution over Fluentd that required less resources to run optimally within the cluster; it is important to note that Fluentd does have Docker images that do support `armhf` and can be installed just as easily as Fluent Bit by following the [Kubernetes Fluentd Documentation](https://docs.fluentd.org/v/0.12/articles/kubernetes-fluentd). The following steps have been adapted from [Fluent Bit's Kubernetes Guide](https://fluentbit.io/documentation/0.14/installation/kubernetes.html) and installation documentation on MacOS with `brew` for [Elasticsearch](https://www.elastic.co/guide/en/elasticsearch/reference/7.10/brew.html) and [Kibana](https://www.elastic.co/guide/en/kibana/current/brew.html).
 
+1) On an external host *outside* the cluster that is on the same LAN as the RPi jump box (e.g. the laptop used to ssh into the cluster), execute the following commands to install Elasticsearch and Kibana (for MacOS only)
+```bash
+# add the elastic repository to brew
+brew tap elastic/tap
+# install elasticsearch
+brew install elastic/tap/elasticsearch-full
+# install kibana
+brew install elastic/tap/kibana-full
+```
+2) Run the `configure.sh` script located in this repository to configure Elasticsearch and Kibana (scripts only works for MacOS)
+3) Run the following commands to create a `logging` namespace and configure the cluster for Fluent Bit
 ```bash
 kubectl create namespace logging
-kubectl create -f https://raw.githubusercontent.com/fluent/fluent-bit-kubernetes-logging/master/fluent-bit-service-account.yaml
-kubectl create -f https://raw.githubusercontent.com/fluent/fluent-bit-kubernetes-logging/master/fluent-bit-role.yaml
-kubectl create -f https://raw.githubusercontent.com/fluent/fluent-bit-kubernetes-logging/master/fluent-bit-role-binding.yaml
-kubectl create -f https://raw.githubusercontent.com/fluent/fluent-bit-kubernetes-logging/master/output/elasticsearch/fluent-bit-configmap.yaml
-kubectl create -f https://raw.githubusercontent.com/fluent/fluent-bit-kubernetes-logging/master/output/elasticsearch/fluent-bit-ds.yaml
+kubectl apply -f https://raw.githubusercontent.com/fluent/fluent-bit-kubernetes-logging/master/fluent-bit-service-account.yaml
+kubectl apply -f https://raw.githubusercontent.com/fluent/fluent-bit-kubernetes-logging/master/fluent-bit-role.yaml
+kubectl apply -f https://raw.githubusercontent.com/fluent/fluent-bit-kubernetes-logging/master/fluent-bit-role-binding.yaml
+kubectl apply -f https://raw.githubusercontent.com/fluent/fluent-bit-kubernetes-logging/master/output/elasticsearch/fluent-bit-configmap.yaml
+```
+4) Configure the Fluent Bit DaemonSet before deploying
+```bash
+# retrieve the Fluent Bit DaemonSet yaml and save it to a file
+curl https://raw.githubusercontent.com/fluent/fluent-bit-kubernetes-logging/master/output/elasticsearch/fluent-bit-ds.yaml -o fluent-bit-ds.yaml
+# edit the Fluent Bit DaemonSet yaml and make the following changes as described above
+nano fluent-bit-ds.yaml
+# apply the edited DaemonSet to the cluster
+kubectl apply -f fluent-bit-ds.yaml
 ```
 
-`brew services start elastic/tap/elasticsearch-full`
-`brew services start elastic/tap/kibana-full`
+#### Side Notes
+- `brew services start elastic/tap/elasticsearch-full` if you'd like to run Elasticsearch as a service on boot (MacOS only)
+- `brew services start elastic/tap/kibana-full` if you'd like to run Kibana as a service on boot (MacOS only)
 
 ## References
 - [Disabling Swap](https://www.raspberrypi.org/forums/viewtopic.php?p=1488821)
