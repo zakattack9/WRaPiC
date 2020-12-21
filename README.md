@@ -26,6 +26,8 @@ Most sections include a *Side Notes* subsection that includes extra information 
   - [Configure iTerm2 Window Arrangement and Profile](https://github.com/zakattack9/WRaPiC#configure-iterm-window-arrangement-and-profiles)
   - [Install Prometheus and Grafana](https://github.com/zakattack9/WRaPiC#install-prometheus-and-grafana)
     - [Side Notes](https://github.com/zakattack9/WRaPiC#side-notes-6)
+  - [Install EFK Stack (Elasticsearch, Fluent Bit, Kibana)](https://github.com/zakattack9/WRaPiC#install-efk-stack-elasticsearch-fluent-bit-kibana)
+    - [Side Notes](https://github.com/zakattack9/WRaPiC#side-notes-7)
 - [References](https://github.com/zakattack9/WRaPiC#references)
 
 *As a disclaimer, most of these steps have been adapted from multiple articles, guides, and documentations found online which have been compiled into this README for easy access and a more straightforward cluster setup. Much credit goes to Alex Ellis' [Kubernetes on Raspian](https://github.com/teamserverless/k8s-on-raspbian) repository and Tim Downey's [Baking a Pi Router](https://downey.io/blog/create-raspberry-pi-3-router-dhcp-server/) guide.*
