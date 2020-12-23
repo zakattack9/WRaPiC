@@ -616,7 +616,7 @@ brew install elastic/tap/kibana-full
 3) Execute the `configure.sh` script (pass in the ip address found in the previous step) located in this repository to configure Elasticsearch and Kibana if they were installed via `brew` for MacOS; for Linux and Windows navigate to the `config/` folder in the unzipped Elasticsearch and Kibana packages to make the following changes
 ##### Elasticsearch
 ```bash
-# add the following to config/elasticsearch.yml under the "Network" section
+# in config/elasticsearch.yml, add the following under the "Network" section
 # replace <ip-address> with the ip found in step 2
 network.bind_host: <ip-address>
 http.port: 9200
@@ -626,7 +626,7 @@ transport.tcp.port: 9300
 ```
 ##### Kibana
 ```bash
-# uncomment and modify the following in config/kibana.yml 
+# in config/kibana.yml, uncomment and modify the following 
 # replace <ip-address> with the ip found in step 2
 elasticsearch.hosts: ["http://<ip-address>:9200"]
 ```
