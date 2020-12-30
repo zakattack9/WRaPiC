@@ -567,10 +567,10 @@ This section deploys Prometheus and Grafana to your cluster and exposes them ext
 ##### With Temperature Metrics
 ```bash
 # edit vars.jsonnet to enable temp metrics and configure the ingress ip address
+nano vars.jsonnet
 # set "enabled" to true for "armExporter" under "modules"
 # set "suffixDomain" to the ip address found in step 3 and append ".nip.io" to the end of it
 # e.g. 192.168.0.1 => 192.168.0.1.nip.io
-nano vars.jsonnet
 make vendor
 make
 make deploy
@@ -600,7 +600,9 @@ communicating with server failed: Get \"https://10.96.0.1:443/version?timeout=32
 - If the kube-state-metrics pod is constantly crashing, I found that deleting the kube-flannel-ds pod on the same node seemed to resolve the issue; `sudo ip link delete flannel.1` should be run first before deleting the flannel pod off the same node
 
 ### Install EFK Stack (Elasticsearch, Fluent Bit, Kibana)
-This section deploys Fluent Bit to the RPi K8s cluster and installs Elasticsearch and Kibana on a reachable host *outside* the cluster. Unfortunately, the ELK stack currently has Docker images that supports only `arm64` and `amd64` architectures (theoretically, the full ELK stack could be run on an RPi K8s cluster providing that each node runs on an arm64 architecture); while custom `armhf` Docker images could be built for the ELK stack, it's a lot easier to just run ELK on another host outside the cluster network that has a 64 bit architecture. One major benefit to running both Elasticsearch and Kibana outside of the cluster is that it will not add extra CPU/memory load to the cluster—this is especially true if the cluster runs on RPi's with 2GB of RAM. Fluent Bit was choosen over Fluentd because it was a more lightweight solution over Fluentd that required less resources to run optimally within the cluster; it is important to note that while Fluentd has Docker images that support `armhf`, the [Fluentd Kubernetes DaemonSet](https://hub.docker.com/r/fluent/fluentd-kubernetes-daemonset) images [needed](https://docs.fluentd.org/v/0.12/articles/kubernetes-fluentd) for Fluentd to push logs to Elasticsearch does not have `armhf` support. Richard Youngkin talks about this in his guide, [K8s Application Monitoring on a RPi Cluster](https://medium.com/better-programming/kubernetes-application-monitoring-on-a-raspberry-pi-cluster-fa8f2762b00c) and has already created a Docker image that can be used to run Fluentd on `armhf` with Elasticsearch. The following steps have been adapted from [Fluent Bit's Kubernetes Guide](https://fluentbit.io/documentation/0.14/installation/kubernetes.html) and installation documentation on MacOS with `brew` for [Elasticsearch](https://www.elastic.co/guide/en/elasticsearch/reference/7.10/brew.html) and [Kibana](https://www.elastic.co/guide/en/kibana/current/brew.html).
+This section deploys Fluent Bit to the RPi K8s cluster and installs Elasticsearch and Kibana on a reachable host *outside* the cluster. Unfortunately, the ELK stack currently has Docker images that supports only `arm64` and `amd64` architectures (theoretically, the full ELK stack could be run on an RPi K8s cluster providing that each node runs on an arm64 architecture); while custom `armhf` Docker images could be built for the ELK stack, it's a lot easier to just run ELK on another host outside the cluster network that has a 64 bit architecture. One major benefit to running both Elasticsearch and Kibana outside of the cluster is that it will not add extra CPU/memory load to the cluster—this is especially important if you have plans to run other resource intensive services.
+
+Fluent Bit was choosen over Fluentd because it was a more lightweight solution over Fluentd that required less resources to run optimally within the cluster; it is important to note that while Fluentd has Docker images that support `armhf`, the [Fluentd Kubernetes DaemonSet](https://hub.docker.com/r/fluent/fluentd-kubernetes-daemonset) images [needed](https://docs.fluentd.org/v/0.12/articles/kubernetes-fluentd) for Fluentd to push logs to Elasticsearch does not have `armhf` support. Richard Youngkin talks about this in his guide, [K8s Application Monitoring on a RPi Cluster](https://medium.com/better-programming/kubernetes-application-monitoring-on-a-raspberry-pi-cluster-fa8f2762b00c) and has already created a Docker image that can be used to run Fluentd on `armhf` with Elasticsearch. The following steps have been adapted from [Fluent Bit's Kubernetes Guide](https://fluentbit.io/documentation/0.14/installation/kubernetes.html) and installation documentation on MacOS with `brew` for [Elasticsearch](https://www.elastic.co/guide/en/elasticsearch/reference/7.10/brew.html) and [Kibana](https://www.elastic.co/guide/en/kibana/current/brew.html).
 
 1) On an external host *outside* the cluster that is on the same LAN as the RPi jump box (e.g. the laptop used to ssh into the cluster), execute the following commands to install Elasticsearch and Kibana (for MacOS only); for Linux and Windows, follow [Installing Elasticsearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/install-elasticsearch.html) and [Installing Kibana](https://www.elastic.co/guide/en/kibana/current/install.html) to download both packages as a zip
 ```bash
@@ -614,6 +616,12 @@ brew install elastic/tap/kibana-full
 ```
 2) Get the ip address of the external host which Elasticsearch and Kibana will be run on (use `ifconfig`); this is important so that we can bind `localhost` to an actual ip address which Fluent Bit can access from within the cluster in later steps
 3) Execute the `configure.sh` script (pass in the ip address found in the previous step) located in this repository to configure Elasticsearch and Kibana if they were installed via `brew` for MacOS; for Linux and Windows navigate to the `config/` folder in the unzipped Elasticsearch and Kibana packages to make the following changes
+#### Using configure.sh
+```bash
+# use this script if Elasticsearch and Kibana were installed via brew
+./configure.sh <ip-address>
+# for Linux/Windows, use the manual mehtod below
+```
 ##### Elasticsearch
 ```bash
 # in config/elasticsearch.yml, add the following under the "Network" section
