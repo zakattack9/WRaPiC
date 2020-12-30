@@ -616,7 +616,7 @@ brew install elastic/tap/kibana-full
 ```
 2) Get the ip address of the external host which Elasticsearch and Kibana will be run on (use `ifconfig`); this is important so that we can bind `localhost` to an actual ip address which Fluent Bit can access from within the cluster in later steps
 3) Execute the `configure.sh` script (pass in the ip address found in the previous step) located in this repository to configure Elasticsearch and Kibana if they were installed via `brew` for MacOS; for Linux and Windows navigate to the `config/` folder in the unzipped Elasticsearch and Kibana packages to make the following changes
-#### Using configure.sh
+##### Using configure.sh
 ```bash
 # use this script if Elasticsearch and Kibana were installed via brew
 ./configure.sh <ip-address>
