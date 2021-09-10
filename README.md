@@ -52,14 +52,11 @@ My cluster only includes 4 RPi 4B's though there is no limit to the amount of RP
 ## Initial Headless Raspberry Pi Setup
 In headless setup, only WiFi and ssh are used to configure the RPi's without the need for an external monitor and keyboard. This will likely be the most tedious and time consuming part of the set up. These steps should be repeated individually for each RPi with only one RPi being connected to the network at a given time; this makes it easier to find and distinguish the RPi's in step 5.
 
-1) Install **Raspberry Pi OS Lite (32-bit)** with [Raspberry Pi Imager](https://www.raspberrypi.org/software/)
+1. Install **Raspberry Pi OS Lite (32-bit)** with [Raspberry Pi Imager](https://www.raspberrypi.org/software/)
   - As an alternative, the [Raspberry Pi OS (64-bit) beta](https://www.raspberrypi.org/forums/viewtopic.php?p=1668160) may be installed instead if you plan to use arm64 Docker images or would like to use Calico as your K8s CNI; it is important to note that the 64-bit beta is the full Raspberry Pi OS which includes the desktop GUI and therefore may contain unneeded packages/bulk
   - Another great option if an arm64 architecture is desired, is to install the officially supported 64-bit Ubuntu Server OS using the Raspberry Pi Imager
-
-2) Create an empty `ssh` file (no extension) in the root directory of the micro sd card 
-
-3) Create a `wpa_supplicant.conf` in the `boot` folder to [set up a WiFi connection](https://www.raspberrypi.org/documentation/configuration/wireless/headless.md)
-
+2. Create an empty `ssh` file (no extension) in the root directory of the micro sd card 
+3. Create a `wpa_supplicant.conf` in the `boot` folder to [set up a WiFi connection](https://www.raspberrypi.org/documentation/configuration/wireless/headless.md)
 ```bash
 # /boot/wpa_supplicant.conf
 ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
@@ -72,36 +69,27 @@ network={
 }
 ```
   - The remote machine which will be used to configure and ssh into all the RPi's should be on the same network as declared in the above `wpa_supplicant.conf`
-
-4) Insert the micro SD card back into the RPi and power it on
-
-5) `ssh pi@raspberrypi.local` to connect to the RPi; `ping raspberrypi.local` may also be used to get the RPi's IP address to run `ssh pi@<ip-address>`
-
-6) `sudo raspi-config` to access the RPi configuration menu for making the following recommended changes
+4. Insert the micro SD card back into the RPi and power it on
+5. `ssh pi@raspberrypi.local` to connect to the RPi; `ping raspberrypi.local` may also be used to get the RPi's IP address to run `ssh pi@<ip-address>`
+6. `sudo raspi-config` to access the RPi configuration menu for making the following recommended changes
   - Change the password from its default `raspberry`
   - Change the hostname which can be used for easier ssh 
   - Expand the filesystem, under advanced options, allowing the full use of the SD card for the OS
   - Update the operating system to the latest version
   - Change the locale
-
-7) Reboot the RPi with `sudo reboot`
-
-8) Set up [passwordless SSH access](https://www.raspberrypi.org/documentation/remote-access/ssh/passwordless.md)
+7. Reboot the RPi with `sudo reboot`
+8. Set up [passwordless SSH access](https://www.raspberrypi.org/documentation/remote-access/ssh/passwordless.md)
   - if you already have previously generated RSA public/private keys simply execute 
 ```ssh-copy-id <USERNAME>@<IP-ADDRESS or HOSTNAME>```
-
-9) `sudo apt-get update -y` to update the package repository
-
-10) `sudo apt-get upgrade -y` to update all installed packages
-
-11) Disable swap with the following commands—it's recommended to run the commands individually to prevent some errors with `kubectl get` later on
+9. `sudo apt-get update -y` to update the package repository
+10. `sudo apt-get upgrade -y` to update all installed packages
+11. Disable swap with the following commands—it's recommended to run the commands individually to prevent some errors with `kubectl get` later on
 ```bash
 sudo dphys-swapfile swapoff
 sudo dphys-swapfile uninstall
 sudo systemctl disable dphys-swapfile
 ```
-
-12) At this point, if you want to use zsh as the default shell for your RPi check out the *[Install zsh w/Oh-my-zsh and Configure Plugins](https://github.com/zakattack9/WRaPiC#install-zsh-woh-my-zsh-and-configure-plugins)* section, otherwise move on to the next section which sets up the jump box
+12. At this point, if you want to use zsh as the default shell for your RPi check out the *[Install zsh w/Oh-my-zsh and Configure Plugins](https://github.com/zakattack9/WRaPiC#install-zsh-woh-my-zsh-and-configure-plugins)* section, otherwise move on to the next section which sets up the jump box
 
 #### Side Notes
 - May need to comment out `SendEnv LANG LC_*` in `/etc/ssh/ssh_config` on host SSH client to fix RPi locale problems
@@ -118,15 +106,12 @@ The following steps will set up the RPi jump box such that it acts as a DHCP ser
 ### Preparation
 Before the jump box is set up, it's important to delete the `wpa_supplicant.conf` files on all RPi's **except** the jump box itself; this is because we want to force the RPi's onto our private cluster network thats separated via our switch and jump box. The jump box will maintain its WiFi connection forwarding internet out its ethernet port and into the switch who then feeds it to the other connected RPi's.
 
-1) `sudo rm /etc/wpa_supplicant/wpa_supplicant.conf` to delete the `wpa_supplicant.conf`
-
-2) `sudo reboot` for changes to take effect
-
-3) Prior to steps 1 and 2, you could ssh into the RPi's directly from your remote machine since they were on the same WiFi network
+1. `sudo rm /etc/wpa_supplicant/wpa_supplicant.conf` to delete the `wpa_supplicant.conf`
+2. `sudo reboot` for changes to take effect
+3. Prior to steps 1 and 2, you could ssh into the RPi's directly from your remote machine since they were on the same WiFi network
 
 ### Jump Box Setup
-1) Set up a [static IP address](https://www.raspberrypi.org/documentation/configuration/tcpip/) for both ethernet and WiFi interfaces by creating a [dhcpcd.conf](https://manpages.debian.org/testing/dhcpcd5/dhcpcd.conf.5.en.html) in `/etc/`
-
+1. Set up a [static IP address](https://www.raspberrypi.org/documentation/configuration/tcpip/) for both ethernet and WiFi interfaces by creating a [dhcpcd.conf](https://manpages.debian.org/testing/dhcpcd5/dhcpcd.conf.5.en.html) in `/etc/`
 ```bash
 # /etc/dhcpcd.conf
 interface eth0
@@ -141,9 +126,10 @@ static domain_name_servers=<dns-ip-address>
 ```
   - A sample `dhcpcd.conf` is provided [here](./dhcpcd.conf)
   - Note that the static IP address for `wlan0` should be within the DHCP pool range on the router
-2) `sudo apt install dnsmasq` to install [dnsmasq](https://www.linux.org/docs/man8/dnsmasq.html) 
-3) `sudo mv /etc/dnsmasq.conf /etc/dnsmasq.conf.backup` to backup the existing `dnsmasq.conf`
-4) Create a new dnsmasq config file with `sudo nano /etc/dnsmasq.conf` and add the following
+2. `sudo apt install dnsmasq` to install [dnsmasq](https://www.linux.org/docs/man8/dnsmasq.html) 
+3. `sudo mv /etc/dnsmasq.conf /etc/dnsmasq.conf.backup` to backup the existing `dnsmasq.conf`
+4. Create a new dnsmasq config file with `sudo nano /etc/dnsmasq.conf` and add the following
+
 ```bash
 # Provide a DHCP service over our eth0 adapter (ethernet port)
 interface=eth0
@@ -189,19 +175,28 @@ no-resolv
   - Note that the `listen-address` is the same as the `static ip-address` for `eth0` declared in `dhcpcd.conf`
   - If you have more or less than three worker nodes, declare or delete `dhcp-host` as needed ensuring that the correct MAC addresses are used
   - `ifconfig eth0` can be used to find each RPi’s MAC address (look next to “ether”)
+
 5) `sudo nano /etc/default/dnsmasq` and add `DNSMASQ_EXCEPT=lo` at the end of the file
   - This is needed to [prevent dnsmasq from overwriting](https://raspberrypi.stackexchange.com/questions/37439/proper-way-to-prevent-dnsmasq-from-overwriting-dns-server-list-supplied-by-dhcp) `/etc/resolv.conf` on reboot which can crash the coredns pods when later initializing kubeadm
+
 6) `sudo nano /etc/init.d/dnsmasq` and add `sleep 10` to the top of the file to prevent errors with booting up dnsmasq
+
 7) `sudo reboot` to reboot the RPi for dnsmasq changes to take effect
+
 8) ssh back into the RPi jump box and ensure that dnsmasq is running with `sudo service dnsmasq status`
+
 9) `sudo nano /etc/sysctl.conf` and uncomment `net.ipv4.ip_forward=1` to enable NAT rules with iptables
+
 10) Add the following `iptables` rules to enable port forwarding
+
 ```bash
 sudo iptables -t nat -A POSTROUTING -o wlan0 -j MASQUERADE
 sudo iptables -A FORWARD -i wlan0 -o eth0 -m state --state RELATED,ESTABLISHED -j ACCEPT
 sudo iptables -A FORWARD -i eth0 -o wlan0 -j ACCEPT
 ```
+
 11) `sudo apt install iptables-persistent` to install iptables-persistent
+
 12) `sudo dpkg-reconfigure iptables-persistent` to re-save and persist our `iptables` rules across reboots
 
 #### Side Notes
@@ -219,30 +214,41 @@ These steps should be performed on all RPi's within the cluster *including* the 
 
 1) Install Docker
 ##### Install the latest version of Docker
+
 ```bash
 curl -sSL get.docker.com | sh && sudo usermod pi -aG docker
 ```
   - Note this specific script must be used as specified in the [Docker documentation](https://docs.docker.com/engine/install/debian/#install-using-the-convenience-script)
+
 ##### Install a specific version of Docker
+
 ```bash
 export VERSION=<version> && curl -sSL get.docker.com | sh
 sudo usermod pi -aG docker
 ```
   - Where `<version>` is replaced with a specific Docker Engine version 
+
 2) `sudo nano /boot/cmdline.txt` and add the following to the end of the line—do not make a new line and ensure that there's a space in front of `cgroup_enable=cpuset`
+
 ```bash
 cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory
 ```
+
 3) `sudo reboot` to reboot the RPi for boot changes to take effect (do not skip this step)
+
 4) Install Kubernetes
+
 ##### Install the latest version of K8s
+
 ```bash
 curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - && \
   echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list && \
   sudo apt-get update -q && \
   sudo apt-get install -qy kubeadm
 ```
+
 ##### Install a specific version of K8s
+
 ```bash
 curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - && \
   echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list && \
@@ -250,47 +256,64 @@ curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add
   sudo apt-get install -qy kubelet=<version> kubectl=<version> kubeadm=<version>
 ```
   - Where `<version>` is replaced with a specific K8s version; append `-00` to the end of the version if it's not already added (e.g. 1.19.5 => 1.19.5-00)
+
 5) `sudo sysctl net.bridge.bridge-nf-call-iptables=1`
 
 ### Master Node Setup
 The following steps should be performed only on one RPi (I used the RPi jump box). This section assumes that you're running an `armhf` architecture on your RPi's and therefore will use either [Flannel](https://github.com/coreos/flannel) or [Weave Net](https://github.com/weaveworks/weave) as your cluster's CNI.
 
 1) `sudo kubeadm config images pull -v3` to pull down the images required for the K8s master node
+
 2) `sudo nano /etc/resolv.conf` and ensure that it does not have `nameserver 127.0.0.1` 
   - If `nameserver 127.0.0.1` exists, remove it and replace it with another DNS IP address that isn't the loopback address, then double check that `DNSMASQ_EXCEPT=lo` has been added in `/etc/default/dnsmasq` to prevent dnsmasq from overwriting/adding `nameserver 127.0.0.1` to `/etc/resolv.conf` upon reboot
   - This step is crucial to prevent coredns pods from crashing upon running `kubeadm init`
+
 3) Initialize the master node and save the `kubeadm join` command provided after the `kubeadm init` finishes—note that the init command will depend on the CNI of your choosing
+
 ##### Flannel
+
 ```bash
 sudo kubeadm init --token-ttl=0 --pod-network-cidr=10.244.0.0/16
 ```
+
 ##### Weave Net
+
 ```bash
 sudo kubeadm init --token-ttl=0
 ```
+
 4) Run following commands after `kubeadm init` finishes
+
 ```bash
 mkdir -p $HOME/.kube
 sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
 ```
+
 5) `kubectl get pods -n kube-system` to double check the status of all master node pods (each should have a status of "Running")
   - If the coredns pods are failing, see the *Side Notes* for this section
+
 6) Apply the appropriate CNI config to your cluster
+
 ##### Flannel
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
 ```
+
 ##### Weave Net
 ```bash
 kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
 ```
+
 7) Run the `kubeadm join` command saved in step 3, on all worker nodes, an example join command is provided below
+
 ```bash
 kubeadm join 192.168.29.229:6443 --token 2t9e17.m8jbybvnnheqwwjp \
     --discovery-token-ca-cert-hash sha256:4ca2fa33d228075da93f5cb3d8337931b32c8de280a664726fe6fc73fba89563
 ```
+
 8) `kubectl get nodes` to check that all nodes were joined successfully
+
 9) At this point, all RPi's should be set up and ready to run almost anything on top of K8s; however, if you'd like to expose services within your cluster for external access, follow the next section which will install a load balancer and ingress controller
 
 *Optionally, you can now follow the [Kubernetes Dashboard Setup](https://github.com/zakattack9/WRaPiC#kubernetes-dashboard-setup) section to configure the Web UI for cluster monitoring*
