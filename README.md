@@ -69,8 +69,7 @@ network={
   psk="<WiFi-password>"
 }
 ```
-    - The remote machine which will be used to configure and ssh into all the RPi's should be on the same network as declared in the above `wpa_supplicant.conf`
-
+  - The remote machine which will be used to configure and ssh into all the RPi's should be on the same network as declared in the above `wpa_supplicant.conf`
 4. Insert the micro SD card back into the RPi and power it on
 5. `ssh pi@raspberrypi.local` to connect to the RPi; `ping raspberrypi.local` may also be used to get the RPi's IP address to run `ssh pi@<ip-address>`
 6. `sudo raspi-config` to access the RPi configuration menu for making the following recommended changes:
