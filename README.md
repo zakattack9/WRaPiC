@@ -57,6 +57,7 @@ In headless setup, only WiFi and ssh are used to configure the RPi's without the
   - Another great option if an arm64 architecture is desired, is to install the officially supported 64-bit Ubuntu Server OS using the Raspberry Pi Imager
 2. Create an empty `ssh` file (no extension) in the root directory of the micro sd card 
 3. Create a `wpa_supplicant.conf` in the `boot` folder to [set up a WiFi connection](https://www.raspberrypi.org/documentation/configuration/wireless/headless.md)
+
 ```bash
 # /boot/wpa_supplicant.conf
 ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
@@ -84,6 +85,7 @@ network={
 9. `sudo apt-get update -y` to update the package repository
 10. `sudo apt-get upgrade -y` to update all installed packages
 11. Disable swap with the following commands—it's recommended to run the commands individually to prevent some errors with `kubectl get` later on
+
 ```bash
 sudo dphys-swapfile swapoff
 sudo dphys-swapfile uninstall
@@ -112,6 +114,7 @@ Before the jump box is set up, it's important to delete the `wpa_supplicant.conf
 
 ### Jump Box Setup
 1. Set up a [static IP address](https://www.raspberrypi.org/documentation/configuration/tcpip/) for both ethernet and WiFi interfaces by creating a [dhcpcd.conf](https://manpages.debian.org/testing/dhcpcd5/dhcpcd.conf.5.en.html) in `/etc/`
+
 ```bash
 # /etc/dhcpcd.conf
 interface eth0
@@ -175,29 +178,21 @@ no-resolv
   - Note that the `listen-address` is the same as the `static ip-address` for `eth0` declared in `dhcpcd.conf`
   - If you have more or less than three worker nodes, declare or delete `dhcp-host` as needed ensuring that the correct MAC addresses are used
   - `ifconfig eth0` can be used to find each RPi’s MAC address (look next to “ether”)
-
-5) `sudo nano /etc/default/dnsmasq` and add `DNSMASQ_EXCEPT=lo` at the end of the file
+5. `sudo nano /etc/default/dnsmasq` and add `DNSMASQ_EXCEPT=lo` at the end of the file
   - This is needed to [prevent dnsmasq from overwriting](https://raspberrypi.stackexchange.com/questions/37439/proper-way-to-prevent-dnsmasq-from-overwriting-dns-server-list-supplied-by-dhcp) `/etc/resolv.conf` on reboot which can crash the coredns pods when later initializing kubeadm
-
-6) `sudo nano /etc/init.d/dnsmasq` and add `sleep 10` to the top of the file to prevent errors with booting up dnsmasq
-
-7) `sudo reboot` to reboot the RPi for dnsmasq changes to take effect
-
-8) ssh back into the RPi jump box and ensure that dnsmasq is running with `sudo service dnsmasq status`
-
-9) `sudo nano /etc/sysctl.conf` and uncomment `net.ipv4.ip_forward=1` to enable NAT rules with iptables
-
-10) Add the following `iptables` rules to enable port forwarding
+6. `sudo nano /etc/init.d/dnsmasq` and add `sleep 10` to the top of the file to prevent errors with booting up dnsmasq
+7. `sudo reboot` to reboot the RPi for dnsmasq changes to take effect
+8. ssh back into the RPi jump box and ensure that dnsmasq is running with `sudo service dnsmasq status`
+9. `sudo nano /etc/sysctl.conf` and uncomment `net.ipv4.ip_forward=1` to enable NAT rules with iptables
+10. Add the following `iptables` rules to enable port forwarding
 
 ```bash
 sudo iptables -t nat -A POSTROUTING -o wlan0 -j MASQUERADE
 sudo iptables -A FORWARD -i wlan0 -o eth0 -m state --state RELATED,ESTABLISHED -j ACCEPT
 sudo iptables -A FORWARD -i eth0 -o wlan0 -j ACCEPT
 ```
-
-11) `sudo apt install iptables-persistent` to install iptables-persistent
-
-12) `sudo dpkg-reconfigure iptables-persistent` to re-save and persist our `iptables` rules across reboots
+11. `sudo apt install iptables-persistent` to install iptables-persistent
+12. `sudo dpkg-reconfigure iptables-persistent` to re-save and persist our `iptables` rules across reboots
 
 #### Side Notes
 - If something goes wrong, I highly recommend checking out [Tim Downey's RPi router guide](https://downey.io/blog/create-raspberry-pi-3-router-dhcp-server/) as additional information is provided there
