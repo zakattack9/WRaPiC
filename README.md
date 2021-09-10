@@ -57,6 +57,7 @@ In headless setup, only WiFi and ssh are used to configure the RPi's without the
   - Another great option if an arm64 architecture is desired, is to install the officially supported 64-bit Ubuntu Server OS using the Raspberry Pi Imager
 
 2) Create an empty `ssh` file (no extension) in the root directory of the micro sd card 
+
 3) Create a `wpa_supplicant.conf` in the `boot` folder to [set up a WiFi connection](https://www.raspberrypi.org/documentation/configuration/wireless/headless.md)
 
 ```bash
@@ -71,26 +72,35 @@ network={
 }
 ```
   - The remote machine which will be used to configure and ssh into all the RPi's should be on the same network as declared in the above `wpa_supplicant.conf`
+
 4) Insert the micro SD card back into the RPi and power it on
+
 5) `ssh pi@raspberrypi.local` to connect to the RPi; `ping raspberrypi.local` may also be used to get the RPi's IP address to run `ssh pi@<ip-address>`
+
 6) `sudo raspi-config` to access the RPi configuration menu for making the following recommended changes
   - Change the password from its default `raspberry`
   - Change the hostname which can be used for easier ssh 
   - Expand the filesystem, under advanced options, allowing the full use of the SD card for the OS
   - Update the operating system to the latest version
   - Change the locale
+
 7) Reboot the RPi with `sudo reboot`
+
 8) Set up [passwordless SSH access](https://www.raspberrypi.org/documentation/remote-access/ssh/passwordless.md)
   - if you already have previously generated RSA public/private keys simply execute 
 ```ssh-copy-id <USERNAME>@<IP-ADDRESS or HOSTNAME>```
+
 9) `sudo apt-get update -y` to update the package repository
+
 10) `sudo apt-get upgrade -y` to update all installed packages
+
 11) Disable swap with the following commands—it's recommended to run the commands individually to prevent some errors with `kubectl get` later on
 ```bash
 sudo dphys-swapfile swapoff
 sudo dphys-swapfile uninstall
 sudo systemctl disable dphys-swapfile
 ```
+
 12) At this point, if you want to use zsh as the default shell for your RPi check out the *[Install zsh w/Oh-my-zsh and Configure Plugins](https://github.com/zakattack9/WRaPiC#install-zsh-woh-my-zsh-and-configure-plugins)* section, otherwise move on to the next section which sets up the jump box
 
 #### Side Notes
@@ -109,11 +119,15 @@ The following steps will set up the RPi jump box such that it acts as a DHCP ser
 Before the jump box is set up, it's important to delete the `wpa_supplicant.conf` files on all RPi's **except** the jump box itself; this is because we want to force the RPi's onto our private cluster network thats separated via our switch and jump box. The jump box will maintain its WiFi connection forwarding internet out its ethernet port and into the switch who then feeds it to the other connected RPi's.
 
 1) `sudo rm /etc/wpa_supplicant/wpa_supplicant.conf` to delete the `wpa_supplicant.conf`
+
 2) `sudo reboot` for changes to take effect
+
 3) Prior to steps 1 and 2, you could ssh into the RPi's directly from your remote machine since they were on the same WiFi network
 
+### Jump Box Setup
 1) Set up a [static IP address](https://www.raspberrypi.org/documentation/configuration/tcpip/) for both ethernet and WiFi interfaces by creating a [dhcpcd.conf](https://manpages.debian.org/testing/dhcpcd5/dhcpcd.conf.5.en.html) in `/etc/`
-```
+
+```bash
 # /etc/dhcpcd.conf
 interface eth0
 static ip_address=10.0.0.1
