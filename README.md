@@ -69,7 +69,7 @@ network={
   psk="<WiFi-password>"
 }
 ```
-  - The remote machine which will be used to configure and ssh into all the RPi's should be on the same network as declared in the above `wpa_supplicant.conf`
+    - The remote machine which will be used to configure and ssh into all the RPi's should be on the same network as declared in the above `wpa_supplicant.conf`
 
 4. Insert the micro SD card back into the RPi and power it on
 5. `ssh pi@raspberrypi.local` to connect to the RPi; `ping raspberrypi.local` may also be used to get the RPi's IP address to run `ssh pi@<ip-address>`
@@ -215,34 +215,29 @@ The following steps will install and configure Docker and Kubernetes on all RPi'
 ### Worker Node Setup
 These steps should be performed on all RPi's within the cluster *including* the jump box/master node.
 
-1) Install Docker
+1. Install Docker
 ##### Install the latest version of Docker
-
 ```bash
 curl -sSL get.docker.com | sh && sudo usermod pi -aG docker
 ```
   - Note this specific script must be used as specified in the [Docker documentation](https://docs.docker.com/engine/install/debian/#install-using-the-convenience-script)
 
 ##### Install a specific version of Docker
-
 ```bash
 export VERSION=<version> && curl -sSL get.docker.com | sh
 sudo usermod pi -aG docker
 ```
   - Where `<version>` is replaced with a specific Docker Engine version 
 
-2) `sudo nano /boot/cmdline.txt` and add the following to the end of the line—do not make a new line and ensure that there's a space in front of `cgroup_enable=cpuset`
+2. `sudo nano /boot/cmdline.txt` and add the following to the end of the line—do not make a new line and ensure that there's a space in front of `cgroup_enable=cpuset`
 
 ```bash
 cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory
 ```
 
-3) `sudo reboot` to reboot the RPi for boot changes to take effect (do not skip this step)
-
-4) Install Kubernetes
-
+3. `sudo reboot` to reboot the RPi for boot changes to take effect (do not skip this step)
+4. Install Kubernetes
 ##### Install the latest version of K8s
-
 ```bash
 curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - && \
   echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list && \
@@ -251,7 +246,6 @@ curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add
 ```
 
 ##### Install a specific version of K8s
-
 ```bash
 curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - && \
   echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list && \
@@ -260,32 +254,29 @@ curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add
 ```
   - Where `<version>` is replaced with a specific K8s version; append `-00` to the end of the version if it's not already added (e.g. 1.19.5 => 1.19.5-00)
 
-5) `sudo sysctl net.bridge.bridge-nf-call-iptables=1`
+5. `sudo sysctl net.bridge.bridge-nf-call-iptables=1`
 
 ### Master Node Setup
 The following steps should be performed only on one RPi (I used the RPi jump box). This section assumes that you're running an `armhf` architecture on your RPi's and therefore will use either [Flannel](https://github.com/coreos/flannel) or [Weave Net](https://github.com/weaveworks/weave) as your cluster's CNI.
 
-1) `sudo kubeadm config images pull -v3` to pull down the images required for the K8s master node
-
-2) `sudo nano /etc/resolv.conf` and ensure that it does not have `nameserver 127.0.0.1` 
+1. `sudo kubeadm config images pull -v3` to pull down the images required for the K8s master node
+2. `sudo nano /etc/resolv.conf` and ensure that it does not have `nameserver 127.0.0.1` 
   - If `nameserver 127.0.0.1` exists, remove it and replace it with another DNS IP address that isn't the loopback address, then double check that `DNSMASQ_EXCEPT=lo` has been added in `/etc/default/dnsmasq` to prevent dnsmasq from overwriting/adding `nameserver 127.0.0.1` to `/etc/resolv.conf` upon reboot
   - This step is crucial to prevent coredns pods from crashing upon running `kubeadm init`
 
-3) Initialize the master node and save the `kubeadm join` command provided after the `kubeadm init` finishes—note that the init command will depend on the CNI of your choosing
+3. Initialize the master node and save the `kubeadm join` command provided after the `kubeadm init` finishes—note that the init command will depend on the CNI of your choosing
 
 ##### Flannel
-
 ```bash
 sudo kubeadm init --token-ttl=0 --pod-network-cidr=10.244.0.0/16
 ```
 
 ##### Weave Net
-
 ```bash
 sudo kubeadm init --token-ttl=0
 ```
 
-4) Run following commands after `kubeadm init` finishes
+4. Run following commands after `kubeadm init` finishes
 
 ```bash
 mkdir -p $HOME/.kube
@@ -293,10 +284,10 @@ sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
 ```
 
-5) `kubectl get pods -n kube-system` to double check the status of all master node pods (each should have a status of "Running")
+5. `kubectl get pods -n kube-system` to double check the status of all master node pods (each should have a status of "Running")
   - If the coredns pods are failing, see the *Side Notes* for this section
 
-6) Apply the appropriate CNI config to your cluster
+6. Apply the appropriate CNI config to your cluster
 
 ##### Flannel
 ```bash
@@ -308,16 +299,15 @@ kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documen
 kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
 ```
 
-7) Run the `kubeadm join` command saved in step 3, on all worker nodes, an example join command is provided below
+7. Run the `kubeadm join` command saved in step 3, on all worker nodes, an example join command is provided below
 
 ```bash
 kubeadm join 192.168.29.229:6443 --token 2t9e17.m8jbybvnnheqwwjp \
     --discovery-token-ca-cert-hash sha256:4ca2fa33d228075da93f5cb3d8337931b32c8de280a664726fe6fc73fba89563
 ```
 
-8) `kubectl get nodes` to check that all nodes were joined successfully
-
-9) At this point, all RPi's should be set up and ready to run almost anything on top of K8s; however, if you'd like to expose services within your cluster for external access, follow the next section which will install a load balancer and ingress controller
+8. `kubectl get nodes` to check that all nodes were joined successfully
+9. At this point, all RPi's should be set up and ready to run almost anything on top of K8s; however, if you'd like to expose services within your cluster for external access, follow the next section which will install a load balancer and ingress controller
 
 *Optionally, you can now follow the [Kubernetes Dashboard Setup](https://github.com/zakattack9/WRaPiC#kubernetes-dashboard-setup) section to configure the Web UI for cluster monitoring*
 
