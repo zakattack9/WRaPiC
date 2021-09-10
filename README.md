@@ -70,18 +70,23 @@ network={
 }
 ```
   - The remote machine which will be used to configure and ssh into all the RPi's should be on the same network as declared in the above `wpa_supplicant.conf`
+
 4. Insert the micro SD card back into the RPi and power it on
 5. `ssh pi@raspberrypi.local` to connect to the RPi; `ping raspberrypi.local` may also be used to get the RPi's IP address to run `ssh pi@<ip-address>`
-6. `sudo raspi-config` to access the RPi configuration menu for making the following recommended changes
+6. `sudo raspi-config` to access the RPi configuration menu for making the following recommended changes:
   - Change the password from its default `raspberry`
   - Change the hostname which can be used for easier ssh 
   - Expand the filesystem, under advanced options, allowing the full use of the SD card for the OS
   - Update the operating system to the latest version
   - Change the locale
+
 7. Reboot the RPi with `sudo reboot`
 8. Set up [passwordless SSH access](https://www.raspberrypi.org/documentation/remote-access/ssh/passwordless.md)
   - if you already have previously generated RSA public/private keys simply execute 
-```ssh-copy-id <USERNAME>@<IP-ADDRESS or HOSTNAME>```
+```bash
+ssh-copy-id <USERNAME>@<IP-ADDRESS or HOSTNAME>
+```
+
 9. `sudo apt-get update -y` to update the package repository
 10. `sudo apt-get upgrade -y` to update all installed packages
 11. Disable swap with the following commands—it's recommended to run the commands individually to prevent some errors with `kubectl get` later on
@@ -98,7 +103,7 @@ sudo systemctl disable dphys-swapfile
 - Check if swap is disabled with `free -h` (look for “Swap:”); may also use `sudo swapon —summary` which should return nothing
 - If swap is still not disabled after reboot, try editing `/etc/dphys-swapfile` and set `CONF_SWAPSIZE=0`
 - Although mentioned frequently, the disable swap command below did not seem to work on RPi Buster OS to fully disable swap (the commands mentioned in step 11 should be used instead)
-```
+```bash
 sudo dphys-swapfile swapoff && sudo dphys-swapfile uninstall && sudo update-rc.d dphys-swapfile remove
 ```
 
@@ -129,6 +134,7 @@ static domain_name_servers=<dns-ip-address>
 ```
   - A sample `dhcpcd.conf` is provided [here](./dhcpcd.conf)
   - Note that the static IP address for `wlan0` should be within the DHCP pool range on the router
+
 2. `sudo apt install dnsmasq` to install [dnsmasq](https://www.linux.org/docs/man8/dnsmasq.html) 
 3. `sudo mv /etc/dnsmasq.conf /etc/dnsmasq.conf.backup` to backup the existing `dnsmasq.conf`
 4. Create a new dnsmasq config file with `sudo nano /etc/dnsmasq.conf` and add the following
@@ -178,6 +184,7 @@ no-resolv
   - Note that the `listen-address` is the same as the `static ip-address` for `eth0` declared in `dhcpcd.conf`
   - If you have more or less than three worker nodes, declare or delete `dhcp-host` as needed ensuring that the correct MAC addresses are used
   - `ifconfig eth0` can be used to find each RPi’s MAC address (look next to “ether”)
+
 5. `sudo nano /etc/default/dnsmasq` and add `DNSMASQ_EXCEPT=lo` at the end of the file
   - This is needed to [prevent dnsmasq from overwriting](https://raspberrypi.stackexchange.com/questions/37439/proper-way-to-prevent-dnsmasq-from-overwriting-dns-server-list-supplied-by-dhcp) `/etc/resolv.conf` on reboot which can crash the coredns pods when later initializing kubeadm
 6. `sudo nano /etc/init.d/dnsmasq` and add `sleep 10` to the top of the file to prevent errors with booting up dnsmasq
@@ -191,6 +198,7 @@ sudo iptables -t nat -A POSTROUTING -o wlan0 -j MASQUERADE
 sudo iptables -A FORWARD -i wlan0 -o eth0 -m state --state RELATED,ESTABLISHED -j ACCEPT
 sudo iptables -A FORWARD -i eth0 -o wlan0 -j ACCEPT
 ```
+
 11. `sudo apt install iptables-persistent` to install iptables-persistent
 12. `sudo dpkg-reconfigure iptables-persistent` to re-save and persist our `iptables` rules across reboots
 
