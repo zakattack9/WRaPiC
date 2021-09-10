@@ -57,6 +57,7 @@ In headless setup, only WiFi and ssh are used to configure the RPi's without the
   - Another great option if an arm64 architecture is desired, is to install the officially supported 64-bit Ubuntu Server OS using the Raspberry Pi Imager
 2. Create an empty `ssh` file (no extension) in the root directory of the micro sd card 
 3. Create a `wpa_supplicant.conf` in the `boot` folder to [set up a WiFi connection](https://www.raspberrypi.org/documentation/configuration/wireless/headless.md)
+
 ```bash
 # /boot/wpa_supplicant.conf
 ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
