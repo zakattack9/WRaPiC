@@ -592,10 +592,10 @@ This is a quick way to set up, run, and access the Kubernetes Dashboard remotely
 - open `calico.yaml` in nano and search for `192.168.0.0/16` 
 	- uncomment and replace with:
     
-    ```yaml
-    - name: CALICO_IPV4POOL_CIDR
-      value: "10.244.0.0/16"
-    ```
+        ```yaml
+        - name: CALICO_IPV4POOL_CIDR
+        value: "10.244.0.0/16"
+        ```
 - `kubectl create -f https://docs.projectcalico.org/manifests/tigera-operator.yaml`
 - `curl https://docs.projectcalico.org/manifests/custom-resources.yaml -O`
 - modify default IP pool CIDR to match pod network CIDR (10.244.0.0/16)
