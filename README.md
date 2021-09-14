@@ -83,9 +83,9 @@ In headless setup, only WiFi and ssh are used to configure the RPi's without the
 8. Set up [passwordless SSH access](https://www.raspberrypi.org/documentation/remote-access/ssh/passwordless.md)
     - if you already have previously generated RSA public/private keys simply execute 
     
-    ```bash
-    ssh-copy-id <USERNAME>@<IP-ADDRESS or HOSTNAME>
-    ```
+        ```bash
+        ssh-copy-id <USERNAME>@<IP-ADDRESS or HOSTNAME>
+        ```
 9. `sudo apt-get update -y` to update the package repository
 10. `sudo apt-get upgrade -y` to update all installed packages
 11. Disable swap with the following commands—it's recommended to run the commands individually to prevent some errors with `kubectl get` later on
@@ -221,12 +221,13 @@ These steps should be performed on all RPi's within the cluster *including* the 
     - Note this specific script must be used as specified in the [Docker documentation](https://docs.docker.com/engine/install/debian/#install-using-the-convenience-script)
 
 ##### Install a specific version of Docker
-    
+
     ```bash
     export VERSION=<version> && curl -sSL get.docker.com | sh
     sudo usermod pi -aG docker
     ```
     - Where `<version>` is replaced with a specific Docker Engine version 
+
 2. `sudo nano /boot/cmdline.txt` and add the following to the end of the line—do not make a new line and ensure that there's a space in front of `cgroup_enable=cpuset`
     ```bash
     cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory
