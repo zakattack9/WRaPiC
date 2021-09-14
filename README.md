@@ -57,6 +57,7 @@ In headless setup, only WiFi and ssh are used to configure the RPi's without the
     - Another great option if an arm64 architecture is desired, is to install the officially supported 64-bit Ubuntu Server OS using the Raspberry Pi Imager
 2. Create an empty `ssh` file (no extension) in the root directory of the micro sd card 
 3. Create a `wpa_supplicant.conf` in the `boot` folder to [set up a WiFi connection](https://www.raspberrypi.org/documentation/configuration/wireless/headless.md)
+    
     ```bash
     # /boot/wpa_supplicant.conf
     ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
@@ -81,12 +82,14 @@ In headless setup, only WiFi and ssh are used to configure the RPi's without the
 7. Reboot the RPi with `sudo reboot`
 8. Set up [passwordless SSH access](https://www.raspberrypi.org/documentation/remote-access/ssh/passwordless.md)
     - if you already have previously generated RSA public/private keys simply execute 
+    
     ```bash
     ssh-copy-id <USERNAME>@<IP-ADDRESS or HOSTNAME>
     ```
 9. `sudo apt-get update -y` to update the package repository
 10. `sudo apt-get upgrade -y` to update all installed packages
 11. Disable swap with the following commands—it's recommended to run the commands individually to prevent some errors with `kubectl get` later on
+    
     ```bash
     sudo dphys-swapfile swapoff
     sudo dphys-swapfile uninstall
@@ -99,6 +102,7 @@ In headless setup, only WiFi and ssh are used to configure the RPi's without the
 - Check if swap is disabled with `free -h` (look for “Swap:”); may also use `sudo swapon —summary` which should return nothing
 - If swap is still not disabled after reboot, try editing `/etc/dphys-swapfile` and set `CONF_SWAPSIZE=0`
 - Although mentioned frequently, the disable swap command below did not seem to work on RPi Buster OS to fully disable swap (the commands mentioned in step 11 should be used instead)
+    
     ```bash
     sudo dphys-swapfile swapoff && sudo dphys-swapfile uninstall && sudo update-rc.d dphys-swapfile remove
     ```
@@ -115,6 +119,7 @@ Before the jump box is set up, it's important to delete the `wpa_supplicant.conf
 
 ### Jump Box Setup
 1. Set up a [static IP address](https://www.raspberrypi.org/documentation/configuration/tcpip/) for both ethernet and WiFi interfaces by creating a [dhcpcd.conf](https://manpages.debian.org/testing/dhcpcd5/dhcpcd.conf.5.en.html) in `/etc/`
+    
     ```bash
     # /etc/dhcpcd.conf
     interface eth0
@@ -185,6 +190,7 @@ Before the jump box is set up, it's important to delete the `wpa_supplicant.conf
 8. ssh back into the RPi jump box and ensure that dnsmasq is running with `sudo service dnsmasq status`
 9. `sudo nano /etc/sysctl.conf` and uncomment `net.ipv4.ip_forward=1` to enable NAT rules with iptables
 10. Add the following `iptables` rules to enable port forwarding
+    
     ```bash
     sudo iptables -t nat -A POSTROUTING -o wlan0 -j MASQUERADE
     sudo iptables -A FORWARD -i wlan0 -o eth0 -m state --state RELATED,ESTABLISHED -j ACCEPT
@@ -207,14 +213,14 @@ The following steps will install and configure Docker and Kubernetes on all RPi'
 These steps should be performed on all RPi's within the cluster *including* the jump box/master node.
 
 1. Install Docker
-
 ##### Install the latest version of Docker
+    
     ```bash
     curl -sSL get.docker.com | sh && sudo usermod pi -aG docker
     ```
     - Note this specific script must be used as specified in the [Docker documentation](https://docs.docker.com/engine/install/debian/#install-using-the-convenience-script)
-
 ##### Install a specific version of Docker
+    
     ```bash
     export VERSION=<version> && curl -sSL get.docker.com | sh
     sudo usermod pi -aG docker
