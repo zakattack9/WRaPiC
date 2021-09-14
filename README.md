@@ -221,6 +221,7 @@ These steps should be performed on all RPi's within the cluster *including* the 
     > ```
     >
     > - Note this specific script must be used as specified in the [Docker documentation](https://docs.docker.com/engine/install/debian/#install-using-the-convenience-script)
+    > 
     > ##### Install a specific version of Docker
     >
     > ```bash
@@ -231,28 +232,30 @@ These steps should be performed on all RPi's within the cluster *including* the 
     > - Where `<version>` is replaced with a specific Docker Engine version 
 
 2. `sudo nano /boot/cmdline.txt` and add the following to the end of the line—do not make a new line and ensure that there's a space in front of `cgroup_enable=cpuset`
+    
     ```bash
     cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory
     ```
 3. `sudo reboot` to reboot the RPi for boot changes to take effect (do not skip this step)
 4. Install Kubernetes
 
-##### Install the latest version of K8s
-    ```bash
-    curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - && \
-    echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list && \
-    sudo apt-get update -q && \
-    sudo apt-get install -qy kubeadm
-    ```
-
-##### Install a specific version of K8s
-    ```bash
-    curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - && \
-    echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list && \
-    sudo apt-get update -q && \
-    sudo apt-get install -qy kubelet=<version> kubectl=<version> kubeadm=<version>
-    ```
-    - Where `<version>` is replaced with a specific K8s version; append `-00` to the end of the version if it's not already added (e.g. 1.19.5 => 1.19.5-00)
+    > ##### Install the latest version of K8s
+    > ```bash
+    > curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - && \
+    > echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list && \
+    > sudo apt-get update -q && \
+    > sudo apt-get install -qy kubeadm
+    > ```
+    >
+    > ##### Install a specific version of K8s
+    > ```bash
+    > curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - && \
+    > echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list && \
+    > sudo apt-get update -q && \
+    > sudo apt-get install -qy kubelet=<version> kubectl=<version> kubeadm=<version>
+    > ```
+    >
+    > - Where `<version>` is replaced with a specific K8s version; append `-00` to the end of the version if it's not already added (e.g. 1.19.5 => 1.19.5-00)
 5. `sudo sysctl net.bridge.bridge-nf-call-iptables=1`
 
 ### Master Node Setup
