@@ -53,11 +53,10 @@ My cluster only includes 4 RPi 4B's though there is no limit to the amount of RP
 In headless setup, only WiFi and ssh are used to configure the RPi's without the need for an external monitor and keyboard. This will likely be the most tedious and time consuming part of the set up. These steps should be repeated individually for each RPi with only one RPi being connected to the network at a given time; this makes it easier to find and distinguish the RPi's in step 5.
 
 1. Install **Raspberry Pi OS Lite (32-bit)** with [Raspberry Pi Imager](https://www.raspberrypi.org/software/)
-  - As an alternative, the [Raspberry Pi OS (64-bit) beta](https://www.raspberrypi.org/forums/viewtopic.php?p=1668160) may be installed instead if you plan to use arm64 Docker images or would like to use Calico as your K8s CNI; it is important to note that the 64-bit beta is the full Raspberry Pi OS which includes the desktop GUI and therefore may contain unneeded packages/bulk
-  - Another great option if an arm64 architecture is desired, is to install the officially supported 64-bit Ubuntu Server OS using the Raspberry Pi Imager
+    - As an alternative, the [Raspberry Pi OS (64-bit) beta](https://www.raspberrypi.org/forums/viewtopic.php?p=1668160) may be installed instead if you plan to use arm64 Docker images or would like to use Calico as your K8s CNI; it is important to note that the 64-bit beta is the full Raspberry Pi OS which includes the desktop GUI and therefore may contain unneeded packages/bulk
+    - Another great option if an arm64 architecture is desired, is to install the officially supported 64-bit Ubuntu Server OS using the Raspberry Pi Imager
 2. Create an empty `ssh` file (no extension) in the root directory of the micro sd card 
 3. Create a `wpa_supplicant.conf` in the `boot` folder to [set up a WiFi connection](https://www.raspberrypi.org/documentation/configuration/wireless/headless.md)
-
     ```bash
     # /boot/wpa_supplicant.conf
     ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
@@ -74,28 +73,25 @@ In headless setup, only WiFi and ssh are used to configure the RPi's without the
 4. Insert the micro SD card back into the RPi and power it on
 5. `ssh pi@raspberrypi.local` to connect to the RPi; `ping raspberrypi.local` may also be used to get the RPi's IP address to run `ssh pi@<ip-address>`
 6. `sudo raspi-config` to access the RPi configuration menu for making the following recommended changes:
-  - Change the password from its default `raspberry`
-  - Change the hostname which can be used for easier ssh 
-  - Expand the filesystem, under advanced options, allowing the full use of the SD card for the OS
-  - Update the operating system to the latest version
-  - Change the locale
-
+    - Change the password from its default `raspberry`
+    - Change the hostname which can be used for easier ssh 
+    - Expand the filesystem, under advanced options, allowing the full use of the SD card for the OS
+    - Update the operating system to the latest version
+    - Change the locale
 7. Reboot the RPi with `sudo reboot`
 8. Set up [passwordless SSH access](https://www.raspberrypi.org/documentation/remote-access/ssh/passwordless.md)
-  - if you already have previously generated RSA public/private keys simply execute 
-```bash
-ssh-copy-id <USERNAME>@<IP-ADDRESS or HOSTNAME>
-```
-
+    - if you already have previously generated RSA public/private keys simply execute 
+    ```bash
+    ssh-copy-id <USERNAME>@<IP-ADDRESS or HOSTNAME>
+    ```
 9. `sudo apt-get update -y` to update the package repository
 10. `sudo apt-get upgrade -y` to update all installed packages
 11. Disable swap with the following commands—it's recommended to run the commands individually to prevent some errors with `kubectl get` later on
-
-```bash
-sudo dphys-swapfile swapoff
-sudo dphys-swapfile uninstall
-sudo systemctl disable dphys-swapfile
-```
+    ```bash
+    sudo dphys-swapfile swapoff
+    sudo dphys-swapfile uninstall
+    sudo systemctl disable dphys-swapfile
+    ```
 12. At this point, if you want to use zsh as the default shell for your RPi check out the *[Install zsh w/Oh-my-zsh and Configure Plugins](https://github.com/zakattack9/WRaPiC#install-zsh-woh-my-zsh-and-configure-plugins)* section, otherwise move on to the next section which sets up the jump box
 
 #### Side Notes
