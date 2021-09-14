@@ -221,8 +221,7 @@ These steps should be performed on all RPi's within the cluster *including* the 
     > ```
     >
     > - Note this specific script must be used as specified in the [Docker documentation](https://docs.docker.com/engine/install/debian/#install-using-the-convenience-script)
-    >
-    > ##### Install a specific version of Docker**
+    > ##### Install a specific version of Docker
     >
     > ```bash
     > export VERSION=<version> && curl -sSL get.docker.com | sh
