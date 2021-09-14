@@ -214,21 +214,20 @@ These steps should be performed on all RPi's within the cluster *including* the 
 
 1. Install Docker
 <!-- ##### Install the latest version of Docker -->
-    - Install the latest version of Docker
-        
-        ```bash
-        curl -sSL get.docker.com | sh && sudo usermod pi -aG docker
-        ```
-        - Note this specific script must be used as specified in the [Docker documentation](https://docs.docker.com/engine/install/debian/#install-using-the-convenience-script)
+> #### Install the latest version of Docker
+>        
+>        ```bash
+>        curl -sSL get.docker.com | sh && sudo usermod pi -aG docker
+>        ```
+>        - Note this specific script must be used as specified in the [Docker documentation](https://docs.docker.com/engine/install/debian/#install-using-the-convenience-script)
 <!-- ##### Install a specific version of Docker -->
-    
-    - Install a specific version of Docker**
-
-        ```bash
-        export VERSION=<version> && curl -sSL get.docker.com | sh
-        sudo usermod pi -aG docker
-        ```
-        - Where `<version>` is replaced with a specific Docker Engine version 
+> #### Install a specific version of Docker**
+>
+>        ```bash
+>        export VERSION=<version> && curl -sSL get.docker.com | sh
+>        sudo usermod pi -aG docker
+>        ```
+>        - Where `<version>` is replaced with a specific Docker Engine version 
 
 2. `sudo nano /boot/cmdline.txt` and add the following to the end of the line—do not make a new line and ensure that there's a space in front of `cgroup_enable=cpuset`
     ```bash
