@@ -58,18 +58,19 @@ In headless setup, only WiFi and ssh are used to configure the RPi's without the
 2. Create an empty `ssh` file (no extension) in the root directory of the micro sd card 
 3. Create a `wpa_supplicant.conf` in the `boot` folder to [set up a WiFi connection](https://www.raspberrypi.org/documentation/configuration/wireless/headless.md)
 
-```bash
-# /boot/wpa_supplicant.conf
-ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
-update_config=1
-country=US
+    ```bash
+    # /boot/wpa_supplicant.conf
+    ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+    update_config=1
+    country=US
 
-network={
-  ssid="<WiFi-SSID>"
-  psk="<WiFi-password>"
-}
-```
-  - The remote machine which will be used to configure and ssh into all the RPi's should be on the same network as declared in the above `wpa_supplicant.conf`
+    network={
+      ssid="<WiFi-SSID>"
+      psk="<WiFi-password>"
+    }
+    ```
+    - The remote machine which will be used to configure and ssh into all the RPi's should be on the same network as declared in the above `wpa_supplicant.conf`
+
 4. Insert the micro SD card back into the RPi and power it on
 5. `ssh pi@raspberrypi.local` to connect to the RPi; `ping raspberrypi.local` may also be used to get the RPi's IP address to run `ssh pi@<ip-address>`
 6. `sudo raspi-config` to access the RPi configuration menu for making the following recommended changes:
