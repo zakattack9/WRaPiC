@@ -132,6 +132,7 @@ Before the jump box is set up, it's important to delete the `wpa_supplicant.conf
 2. `sudo apt install dnsmasq` to install [dnsmasq](https://www.linux.org/docs/man8/dnsmasq.html) 
 3. `sudo mv /etc/dnsmasq.conf /etc/dnsmasq.conf.backup` to backup the existing `dnsmasq.conf`
 4. Create a new dnsmasq config file with `sudo nano /etc/dnsmasq.conf` and add the following
+
     ```bash
     # Provide a DHCP service over our eth0 adapter (ethernet port)
     interface=eth0
@@ -207,13 +208,13 @@ These steps should be performed on all RPi's within the cluster *including* the 
 
 1. Install Docker
 
-    ##### Install the latest version of Docker
+##### Install the latest version of Docker
     ```bash
     curl -sSL get.docker.com | sh && sudo usermod pi -aG docker
     ```
     - Note this specific script must be used as specified in the [Docker documentation](https://docs.docker.com/engine/install/debian/#install-using-the-convenience-script)
 
-    ##### Install a specific version of Docker
+##### Install a specific version of Docker
     ```bash
     export VERSION=<version> && curl -sSL get.docker.com | sh
     sudo usermod pi -aG docker
@@ -226,7 +227,7 @@ These steps should be performed on all RPi's within the cluster *including* the 
 3. `sudo reboot` to reboot the RPi for boot changes to take effect (do not skip this step)
 4. Install Kubernetes
 
-    ##### Install the latest version of K8s
+##### Install the latest version of K8s
     ```bash
     curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - && \
     echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list && \
@@ -234,7 +235,7 @@ These steps should be performed on all RPi's within the cluster *including* the 
     sudo apt-get install -qy kubeadm
     ```
 
-    ##### Install a specific version of K8s
+##### Install a specific version of K8s
     ```bash
     curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - && \
     echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list && \
@@ -254,12 +255,12 @@ The following steps should be performed only on one RPi (I used the RPi jump box
 
 3. Initialize the master node and save the `kubeadm join` command provided after the `kubeadm init` finishes—note that the init command will depend on the CNI of your choosing
 
-    ##### Flannel
+##### Flannel
     ```bash
     sudo kubeadm init --token-ttl=0 --pod-network-cidr=10.244.0.0/16
     ```
 
-    ##### Weave Net
+##### Weave Net
     ```bash
     sudo kubeadm init --token-ttl=0
     ```
@@ -273,12 +274,12 @@ The following steps should be performed only on one RPi (I used the RPi jump box
     - If the coredns pods are failing, see the *Side Notes* for this section
 6. Apply the appropriate CNI config to your cluster
 
-    ##### Flannel
+##### Flannel
     ```bash
     kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
     ```
 
-    ##### Weave Net
+##### Weave Net
     ```bash
     kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
     ```
