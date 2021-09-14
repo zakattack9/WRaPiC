@@ -75,7 +75,7 @@ In headless setup, only WiFi and ssh are used to configure the RPi's without the
 6. `sudo raspi-config` to access the RPi configuration menu for making the following recommended changes:
     - Change the password from its default `raspberry`
     - Change the hostname which can be used for easier ssh 
-    - Expand the filesystem, under advanced options, allowing the full use of the SD card for the OS
+    - Expand the filesystem, under advanced options, allowing full use of the SD card for the OS
     - Update the operating system to the latest version
     - Change the locale
 7. Reboot the RPi with `sudo reboot`
@@ -99,9 +99,9 @@ In headless setup, only WiFi and ssh are used to configure the RPi's without the
 - Check if swap is disabled with `free -h` (look for “Swap:”); may also use `sudo swapon —summary` which should return nothing
 - If swap is still not disabled after reboot, try editing `/etc/dphys-swapfile` and set `CONF_SWAPSIZE=0`
 - Although mentioned frequently, the disable swap command below did not seem to work on RPi Buster OS to fully disable swap (the commands mentioned in step 11 should be used instead)
-```bash
-sudo dphys-swapfile swapoff && sudo dphys-swapfile uninstall && sudo update-rc.d dphys-swapfile remove
-```
+    ```bash
+    sudo dphys-swapfile swapoff && sudo dphys-swapfile uninstall && sudo update-rc.d dphys-swapfile remove
+    ```
 
 ## Setting up the Jump Box and Cluster Network
 The following steps will set up the RPi jump box such that it acts as a DHCP server and DNS forwarder. It is assumed that at this point all RPi's have already been configured and are connected to the switch.
@@ -115,86 +115,80 @@ Before the jump box is set up, it's important to delete the `wpa_supplicant.conf
 
 ### Jump Box Setup
 1. Set up a [static IP address](https://www.raspberrypi.org/documentation/configuration/tcpip/) for both ethernet and WiFi interfaces by creating a [dhcpcd.conf](https://manpages.debian.org/testing/dhcpcd5/dhcpcd.conf.5.en.html) in `/etc/`
+    ```bash
+    # /etc/dhcpcd.conf
+    interface eth0
+    static ip_address=10.0.0.1
+    static domain_name_servers=<dns-ip-address>
+    nolink
 
-```bash
-# /etc/dhcpcd.conf
-interface eth0
-static ip_address=10.0.0.1
-static domain_name_servers=<dns-ip-address>
-nolink
-
-interface wlan0
-static ip_address=<static-ip-address>
-static routers=<router-ip-address>
-static domain_name_servers=<dns-ip-address>
-```
-  - A sample `dhcpcd.conf` is provided [here](./dhcpcd.conf)
-  - Note that the static IP address for `wlan0` should be within the DHCP pool range on the router
-
+    interface wlan0
+    static ip_address=<static-ip-address>
+    static routers=<router-ip-address>
+    static domain_name_servers=<dns-ip-address>
+    ```
+    - A sample `dhcpcd.conf` is provided [here](./dhcpcd.conf)
+    - Note that the static IP address for `wlan0` should be within the DHCP pool range on the router
 2. `sudo apt install dnsmasq` to install [dnsmasq](https://www.linux.org/docs/man8/dnsmasq.html) 
 3. `sudo mv /etc/dnsmasq.conf /etc/dnsmasq.conf.backup` to backup the existing `dnsmasq.conf`
 4. Create a new dnsmasq config file with `sudo nano /etc/dnsmasq.conf` and add the following
+    ```bash
+    # Provide a DHCP service over our eth0 adapter (ethernet port)
+    interface=eth0
 
-```bash
-# Provide a DHCP service over our eth0 adapter (ethernet port)
-interface=eth0
+    # Listen on the static IP address of the RPi router
+    listen-address=10.0.0.1
 
-# Listen on the static IP address of the RPi router
-listen-address=10.0.0.1
+    # Declare DHCP range with an IP address lease time of 12 hours
+    # 97 host addresses total (128 - 32 + 1)
+    dhcp-range=10.0.0.32,10.0.0.128,12h
 
-# Declare DHCP range with an IP address lease time of 12 hours
-# 97 host addresses total (128 - 32 + 1)
-dhcp-range=10.0.0.32,10.0.0.128,12h
+    # Assign static IPs to the kube cluster members (RPi K8s worker nodes 1 to 3)
+    # This will make it easier for tunneling, certs, etc.
+    # Replace b8:27:eb:00:00:0X with the Raspberry Pi's actual MAC address
+    dhcp-host=b8:27:eb:00:00:01,10.0.0.50
+    dhcp-host=b8:27:eb:00:00:02,10.0.0.51
+    dhcp-host=b8:27:eb:00:00:03,10.0.0.52
 
-# Assign static IPs to the kube cluster members (RPi K8s worker nodes 1 to 3)
-# This will make it easier for tunneling, certs, etc.
-# Replace b8:27:eb:00:00:0X with the Raspberry Pi's actual MAC address
-dhcp-host=b8:27:eb:00:00:01,10.0.0.50
-dhcp-host=b8:27:eb:00:00:02,10.0.0.51
-dhcp-host=b8:27:eb:00:00:03,10.0.0.52
+    # Declare name-servers (using Cloudflare's)
+    server=1.1.1.1
+    server=1.0.0.1
 
-# Declare name-servers (using Cloudflare's)
-server=1.1.1.1
-server=1.0.0.1
+    # Bind dnsmasq to the interfaces it is listening on (eth0)
+    # Commented out for now to help dnsmasq server start up
+    bind-interfaces
 
-# Bind dnsmasq to the interfaces it is listening on (eth0)
-# Commented out for now to help dnsmasq server start up
-bind-interfaces
+    # Never forward plain names (without a dot or domain part)
+    domain-needed
 
-# Never forward plain names (without a dot or domain part)
-domain-needed
+    # Never forward addresses in the non-routed address spaces.
+    bogus-priv
 
-# Never forward addresses in the non-routed address spaces.
-bogus-priv
+    # Use the hosts file on this machine
+    expand-hosts
 
-# Use the hosts file on this machine
-expand-hosts
+    # Limits name services to dnsmasq only and will not use /etc/resolv.conf
+    no-resolv
 
-# Limits name services to dnsmasq only and will not use /etc/resolv.conf
-no-resolv
-
-# Uncomment to debug issues
-# log-queries
-# log-dhcp
-```
-  - Note that the `listen-address` is the same as the `static ip-address` for `eth0` declared in `dhcpcd.conf`
-  - If you have more or less than three worker nodes, declare or delete `dhcp-host` as needed ensuring that the correct MAC addresses are used
-  - `ifconfig eth0` can be used to find each RPi’s MAC address (look next to “ether”)
-
+    # Uncomment to debug issues
+    # log-queries
+    # log-dhcp
+    ```
+    - Note that the `listen-address` is the same as the `static ip-address` for `eth0` declared in `dhcpcd.conf`
+    - If you have more or less than three worker nodes, declare or delete `dhcp-host` as needed ensuring that the correct MAC addresses are used
+    - `ifconfig eth0` can be used to find each RPi’s MAC address (look next to “ether”)
 5. `sudo nano /etc/default/dnsmasq` and add `DNSMASQ_EXCEPT=lo` at the end of the file
-  - This is needed to [prevent dnsmasq from overwriting](https://raspberrypi.stackexchange.com/questions/37439/proper-way-to-prevent-dnsmasq-from-overwriting-dns-server-list-supplied-by-dhcp) `/etc/resolv.conf` on reboot which can crash the coredns pods when later initializing kubeadm
+    - This is needed to [prevent dnsmasq from overwriting](https://raspberrypi.stackexchange.com/questions/37439/proper-way-to-prevent-dnsmasq-from-overwriting-dns-server-list-supplied-by-dhcp) `/etc/resolv.conf` on reboot which can crash the coredns pods when later initializing kubeadm
 6. `sudo nano /etc/init.d/dnsmasq` and add `sleep 10` to the top of the file to prevent errors with booting up dnsmasq
 7. `sudo reboot` to reboot the RPi for dnsmasq changes to take effect
 8. ssh back into the RPi jump box and ensure that dnsmasq is running with `sudo service dnsmasq status`
 9. `sudo nano /etc/sysctl.conf` and uncomment `net.ipv4.ip_forward=1` to enable NAT rules with iptables
 10. Add the following `iptables` rules to enable port forwarding
-
-```bash
-sudo iptables -t nat -A POSTROUTING -o wlan0 -j MASQUERADE
-sudo iptables -A FORWARD -i wlan0 -o eth0 -m state --state RELATED,ESTABLISHED -j ACCEPT
-sudo iptables -A FORWARD -i eth0 -o wlan0 -j ACCEPT
-```
-
+    ```bash
+    sudo iptables -t nat -A POSTROUTING -o wlan0 -j MASQUERADE
+    sudo iptables -A FORWARD -i wlan0 -o eth0 -m state --state RELATED,ESTABLISHED -j ACCEPT
+    sudo iptables -A FORWARD -i eth0 -o wlan0 -j ACCEPT
+    ```
 11. `sudo apt install iptables-persistent` to install iptables-persistent
 12. `sudo dpkg-reconfigure iptables-persistent` to re-save and persist our `iptables` rules across reboots
 
@@ -212,44 +206,42 @@ The following steps will install and configure Docker and Kubernetes on all RPi'
 These steps should be performed on all RPi's within the cluster *including* the jump box/master node.
 
 1. Install Docker
-##### Install the latest version of Docker
-```bash
-curl -sSL get.docker.com | sh && sudo usermod pi -aG docker
-```
-  - Note this specific script must be used as specified in the [Docker documentation](https://docs.docker.com/engine/install/debian/#install-using-the-convenience-script)
 
-##### Install a specific version of Docker
-```bash
-export VERSION=<version> && curl -sSL get.docker.com | sh
-sudo usermod pi -aG docker
-```
-  - Where `<version>` is replaced with a specific Docker Engine version 
+    ##### Install the latest version of Docker
+    ```bash
+    curl -sSL get.docker.com | sh && sudo usermod pi -aG docker
+    ```
+    - Note this specific script must be used as specified in the [Docker documentation](https://docs.docker.com/engine/install/debian/#install-using-the-convenience-script)
 
+    ##### Install a specific version of Docker
+    ```bash
+    export VERSION=<version> && curl -sSL get.docker.com | sh
+    sudo usermod pi -aG docker
+    ```
+    - Where `<version>` is replaced with a specific Docker Engine version 
 2. `sudo nano /boot/cmdline.txt` and add the following to the end of the line—do not make a new line and ensure that there's a space in front of `cgroup_enable=cpuset`
-
-```bash
-cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory
-```
-
+    ```bash
+    cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory
+    ```
 3. `sudo reboot` to reboot the RPi for boot changes to take effect (do not skip this step)
 4. Install Kubernetes
-##### Install the latest version of K8s
-```bash
-curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - && \
-  echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list && \
-  sudo apt-get update -q && \
-  sudo apt-get install -qy kubeadm
-```
 
-##### Install a specific version of K8s
-```bash
-curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - && \
-  echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list && \
-  sudo apt-get update -q && \
-  sudo apt-get install -qy kubelet=<version> kubectl=<version> kubeadm=<version>
-```
-  - Where `<version>` is replaced with a specific K8s version; append `-00` to the end of the version if it's not already added (e.g. 1.19.5 => 1.19.5-00)
+    ##### Install the latest version of K8s
+    ```bash
+    curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - && \
+    echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list && \
+    sudo apt-get update -q && \
+    sudo apt-get install -qy kubeadm
+    ```
 
+    ##### Install a specific version of K8s
+    ```bash
+    curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - && \
+    echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list && \
+    sudo apt-get update -q && \
+    sudo apt-get install -qy kubelet=<version> kubectl=<version> kubeadm=<version>
+    ```
+    - Where `<version>` is replaced with a specific K8s version; append `-00` to the end of the version if it's not already added (e.g. 1.19.5 => 1.19.5-00)
 5. `sudo sysctl net.bridge.bridge-nf-call-iptables=1`
 
 ### Master Node Setup
@@ -257,51 +249,44 @@ The following steps should be performed only on one RPi (I used the RPi jump box
 
 1. `sudo kubeadm config images pull -v3` to pull down the images required for the K8s master node
 2. `sudo nano /etc/resolv.conf` and ensure that it does not have `nameserver 127.0.0.1` 
-  - If `nameserver 127.0.0.1` exists, remove it and replace it with another DNS IP address that isn't the loopback address, then double check that `DNSMASQ_EXCEPT=lo` has been added in `/etc/default/dnsmasq` to prevent dnsmasq from overwriting/adding `nameserver 127.0.0.1` to `/etc/resolv.conf` upon reboot
-  - This step is crucial to prevent coredns pods from crashing upon running `kubeadm init`
+    - If `nameserver 127.0.0.1` exists, remove it and replace it with another DNS IP address that isn't the loopback address, then double check that `DNSMASQ_EXCEPT=lo` has been added in `/etc/default/dnsmasq` to prevent dnsmasq from overwriting/adding `nameserver 127.0.0.1` to `/etc/resolv.conf` upon reboot
+    - This step is crucial to prevent coredns pods from crashing upon running `kubeadm init`
 
 3. Initialize the master node and save the `kubeadm join` command provided after the `kubeadm init` finishes—note that the init command will depend on the CNI of your choosing
 
-##### Flannel
-```bash
-sudo kubeadm init --token-ttl=0 --pod-network-cidr=10.244.0.0/16
-```
+    ##### Flannel
+    ```bash
+    sudo kubeadm init --token-ttl=0 --pod-network-cidr=10.244.0.0/16
+    ```
 
-##### Weave Net
-```bash
-sudo kubeadm init --token-ttl=0
-```
-
+    ##### Weave Net
+    ```bash
+    sudo kubeadm init --token-ttl=0
+    ```
 4. Run following commands after `kubeadm init` finishes
-
-```bash
-mkdir -p $HOME/.kube
-sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-sudo chown $(id -u):$(id -g) $HOME/.kube/config
-```
-
+    ```bash
+    mkdir -p $HOME/.kube
+    sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+    sudo chown $(id -u):$(id -g) $HOME/.kube/config
+    ```
 5. `kubectl get pods -n kube-system` to double check the status of all master node pods (each should have a status of "Running")
-  - If the coredns pods are failing, see the *Side Notes* for this section
-
+    - If the coredns pods are failing, see the *Side Notes* for this section
 6. Apply the appropriate CNI config to your cluster
 
-##### Flannel
-```bash
-kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
-```
+    ##### Flannel
+    ```bash
+    kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+    ```
 
-##### Weave Net
-```bash
-kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
-```
-
+    ##### Weave Net
+    ```bash
+    kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
+    ```
 7. Run the `kubeadm join` command saved in step 3, on all worker nodes, an example join command is provided below
-
-```bash
-kubeadm join 192.168.29.229:6443 --token 2t9e17.m8jbybvnnheqwwjp \
-    --discovery-token-ca-cert-hash sha256:4ca2fa33d228075da93f5cb3d8337931b32c8de280a664726fe6fc73fba89563
-```
-
+    ```bash
+    kubeadm join 192.168.29.229:6443 --token 2t9e17.m8jbybvnnheqwwjp \
+        --discovery-token-ca-cert-hash sha256:4ca2fa33d228075da93f5cb3d8337931b32c8de280a664726fe6fc73fba89563
+    ```
 8. `kubectl get nodes` to check that all nodes were joined successfully
 9. At this point, all RPi's should be set up and ready to run almost anything on top of K8s; however, if you'd like to expose services within your cluster for external access, follow the next section which will install a load balancer and ingress controller
 
@@ -309,64 +294,64 @@ kubeadm join 192.168.29.229:6443 --token 2t9e17.m8jbybvnnheqwwjp \
 
 #### Side Notes
 - To uninstall K8s use the following commands
-```bash
-kubeadm reset
-sudo apt-get purge kubeadm kubectl kubelet kubernetes-cni kube*   
-sudo apt-get autoremove  
-sudo rm -rf ~/.kube
-```
+    ```bash
+    kubeadm reset
+    sudo apt-get purge kubeadm kubectl kubelet kubernetes-cni kube*   
+    sudo apt-get autoremove  
+    sudo rm -rf ~/.kube
+    ```
 - To uninstall Docker use the following commands
-```bash
-sudo apt-get purge docker-ce docker-ce-cli containerd.io
-sudo rm -rf /var/lib/docker
-sudo rm -rf /var/lib/containerd
-```
+    ```bash
+    sudo apt-get purge docker-ce docker-ce-cli containerd.io
+    sudo rm -rf /var/lib/docker
+    sudo rm -rf /var/lib/containerd
+    ```
 - If the coredns pods are stuck in `CrashLoopBackOff` and its logs are showing the error below, the [referenced coredns docs](https://coredns.io/plugins/loop/#troubleshooting) recommends adding `resolvConf: /etc/resolv.conf` to `/etc/kubernetes/kubelet.conf`; however, the following steps resolved the issue since dnsmasq on the RPi jump box was overwriting `resolv.conf`
-```console
-[FATAL] plugin/loop: Loop (127.0.0.1:34536 -> :53) detected for zone ".", see coredns.io/plugins/loop#troubleshooting
-```
-```bash
-# reset kubeadm which will undo any joined nodes
-sudo kubeadm reset
-# edit resolv.conf which coredns references on startup
-# delete "nameserver 127.0.0.1" if it exists
-# add "nameserver 1.1.1.1" or any DNS resolver
-sudo nano /etc/resolv.conf
-# initialize k8s cluster again with the correct init command from step 3
-sudo kubeadm init
-# it is important at this point to make sure that
-# DNSMASQ_EXCEPT=lo was added to the end of /etc/default/dnsmasq
-# this prevents the loopback address from being added back to resolv.conf on reboot
-```
+    ```console
+    [FATAL] plugin/loop: Loop (127.0.0.1:34536 -> :53) detected for zone ".", see coredns.io/plugins/loop#troubleshooting
+    ```
+    ```bash
+    # reset kubeadm which will undo any joined nodes
+    sudo kubeadm reset
+    # edit resolv.conf which coredns references on startup
+    # delete "nameserver 127.0.0.1" if it exists
+    # add "nameserver 1.1.1.1" or any DNS resolver
+    sudo nano /etc/resolv.conf
+    # initialize k8s cluster again with the correct init command from step 3
+    sudo kubeadm init
+    # it is important at this point to make sure that
+    # DNSMASQ_EXCEPT=lo was added to the end of /etc/default/dnsmasq
+    # this prevents the loopback address from being added back to resolv.conf on reboot
+    ```
 - If `kubectl get` is throwing the error below, run the following commands to fix the issue without needing to reboot; additionally, [this thread](https://discuss.kubernetes.io/t/the-connection-to-the-server-host-6443-was-refused-did-you-specify-the-right-host-or-port/552/28) provides some guidance to help resolve this issue—running the disable swap commands individually seemed to do the trick
-```console
-The connection to the server <ip-address>:6443 was refused - did you specify the right host or port?
-```
-```bash
-sudo -i
-swapoff -a
-exit
-strace -eopenat kubectl version
-```
+    ```console
+    The connection to the server <ip-address>:6443 was refused - did you specify the right host or port?
+    ```
+    ```bash
+    sudo -i
+    swapoff -a
+    exit
+    strace -eopenat kubectl version
+    ```
 - If the Flannel pods are continuously crashing and its logs are showing the error below, [this thread](https://github.com/coreos/flannel/issues/1060) helped resolve the issue by running the following commands
-```console
-Error registering network: failed to configure interface flannel.1: failed to ensure address of interface flannel.1: link has incompatible addresses. Remove additional addresses and try again
-```
-```bash
-# check which node the failing flannel pod is on (check the IP)
-kubectl get pods -n kube-system -o wide
-# delete the flannel network interface (run on node found in above command)
-sudo ip link delete flannel.1
-# delete the flannel pod
-kubectl delete pod -n kube-system kube-flannel-ds-<pod-id>
-# watch the status of the pods to ensure the flannel pod is running
-kubectl get pods -n kube-system -w
-```
+    ```console
+    Error registering network: failed to configure interface flannel.1: failed to ensure address of interface flannel.1: link has incompatible addresses. Remove additional addresses and try again
+    ```
+    ```bash
+    # check which node the failing flannel pod is on (check the IP)
+    kubectl get pods -n kube-system -o wide
+    # delete the flannel network interface (run on node found in above command)
+    sudo ip link delete flannel.1
+    # delete the flannel pod
+    kubectl delete pod -n kube-system kube-flannel-ds-<pod-id>
+    # watch the status of the pods to ensure the flannel pod is running
+    kubectl get pods -n kube-system -w
+    ```
 - `kubectl rollout restart -n kube-system deployment/coredns` to restart coredns pods
 - `kubectl logs -n kube-system pod/coredns-<pod-id>` to get the logs of a specific coredns pod
 - `kubectl logs -n kube-system kube-flannel-ds-<pod-id>` to get logs of a specific Flannel pod
 - `kubectl label node <node-name> node-role.kubernetes.io/<role>=<role>` to label nodes
-	- `<role>` should be the same if you're setting the role for a node currently with a role set as `<none>`
+    - `<role>` should be the same if you're setting the role for a node currently with a role set as `<none>`
 - `kubectl label node <node-name> node-role.kubernetes.io/<role>-` to remove a label
 
 ## Install MetalLB and ingress-nginx
