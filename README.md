@@ -1,4 +1,4 @@
-# Wrapic (Wireless Raspberry Pi Cluster)
+# [Wrapic (Wireless Raspberry Pi Cluster)](http://wrapic.zaksakata.com)
 ![Wrapic](./images/wrapic_image.png)
 Wrapic is a Wireless Raspberry Pi Cluster that can run various containerized applications on top of full Kubernetes. What makes the cluster "wireless" is that it doesn't need to be physically connected to a router via ethernet, instead it bridges off WiFi to receive internet—this is great for situations where the router is inaccessible.
 
